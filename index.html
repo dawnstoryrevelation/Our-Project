@@ -1,607 +1,509 @@
-<!doctype html>
-<html lang="en" data-theme="auto">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Whala — Accessible AI for Everyone</title>
-  <meta name="description" content="Whala makes AI accessible to all — especially people with disabilities. Explore our projects: medical imaging CNN for eye ailments, neural search, and ViT‑guided TTS for seamless, eyes‑free AI access." />
-  <meta name="color-scheme" content="light dark" />
-  <link rel="icon" href="logo.png" />
+  <title>Whala — AI for Everyone</title>
+  <meta name="description" content="Whala is devoted to making AI accessible, safe, and free — with a focus on people with disabilities such as visual impairment and blindness." />
+  <meta name="theme-color" content="#0b0b14" />
+  
+  <!-- Typography: system stack for performance & user familiarity -->
   <style>
-    /* -----------------------------
-       Design System
-    ------------------------------*/
     :root {
-      --bg: hsl(240 10% 4%);
-      --surface: hsl(240 10% 7%);
-      --text: hsl(0 0% 98%);
-      --muted: hsl(240 5% 70%);
-      --brand: hsl(264 100% 61%);
-      --brand-2: hsl(198 100% 55%);
-      --accent: hsl(40 100% 60%);
-      --ok: hsl(150 70% 45%);
-      --warn: hsl(16 90% 55%);
-      --shadow: 0 10px 30px hsl(240 10% 3% / 0.35);
-      --radius: 22px;
-      --radius-sm: 14px;
-      --ring: 0 0 0 3px hsl(198 100% 55% / .35);
-      --maxw: 1200px;
-      --grid-gap: clamp(16px, 2.5vw, 28px);
-    }
-    
-    [data-theme="light"]:root {
-      --bg: hsl(0 0% 100%);
-      --surface: hsl(0 0% 98%);
-      --text: hsl(240 10% 6%);
-      --muted: hsl(240 5% 45%);
-      --shadow: 0 10px 30px hsl(240 10% 30% / 0.18);
-    }
-
-    [data-hc="true"]:root {
-      --bg: #000;
-      --surface: #000;
-      --text: #fff;
-      --muted: #fff;
-      --brand: #fff;
-      --brand-2: #fff;
-      --accent: #fff;
-      --shadow: none;
+      --bg: #0b0b14;           /* deep ink */
+      --bg-soft: #0f1120;      /* panel */
+      --text: #f7f7fb;         /* near-white */
+      --muted: #b9b9c9;        /* soft gray */
+      --brand: #7ad8ff;        /* cyan */
+      --brand-2: #b07cff;      /* violet */
+      --accent: #64ffa1;       /* mint */
+      --danger: #ff5a84;       /* coral */
+      --focus: #ffe084;        /* warm focus ring */
+      --card: rgba(255,255,255,0.06);
+      --blur: blur(12px);
+      --radius-xl: 22px;
+      --radius-xxl: 30px;
+      --shadow-1: 0 10px 30px rgba(0,0,0,0.25);
+      --shadow-2: 0 20px 60px rgba(0,0,0,0.4);
+      --grid: 88px;            /* rhythm unit for geometry */
+      --speed-1: 800ms;
+      --speed-2: 1400ms;
+      --speed-3: 2200ms;
+      --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
 
     * { box-sizing: border-box; }
     html, body { height: 100%; }
     body {
       margin: 0;
-      background: var(--bg);
+      font-family: var(--font-sans);
       color: var(--text);
-      font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-      text-rendering: optimizeLegibility;
+      background: radial-gradient(1200px 800px at 10% -10%, rgba(122,216,255,0.12), transparent 55%),
+                  radial-gradient(1200px 800px at 110% 10%, rgba(176,124,255,0.12), transparent 55%),
+                  radial-gradient(900px 600px at 50% 120%, rgba(100,255,161,0.08), transparent 60%),
+                  var(--bg);
+      overflow-x: hidden;
     }
 
-    /* Focus & helpers */
-    :focus-visible { outline: none; box-shadow: var(--ring); border-radius: 10px; }
-    .visually-hidden { position: absolute !important; height: 1px; width: 1px; overflow: hidden; clip: rect(1px, 1px, 1px, 1px); white-space: nowrap; }
-    .skip-link { position: absolute; left: -999px; top: auto; width: 1px; height: 1px; overflow: hidden; }
-    .skip-link:focus { left: 12px; top: 12px; width: auto; height: auto; padding: .6rem 1rem; background: var(--brand-2); color: #000; border-radius: 999px; box-shadow: var(--shadow); z-index: 10000; }
-
-    /* Layout */
-    .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 clamp(16px, 2vw, 28px); }
-    header.site {
-      position: sticky; top: 0; z-index: 1000;
-      background: linear-gradient(180deg, var(--bg), color-mix(in oklab, var(--bg) 80%, transparent));
-      backdrop-filter: saturate(140%) blur(8px);
-      border-bottom: 1px solid color-mix(in oklab, var(--muted) 15%, transparent);
+    /* Skip to content for screen-reader & keyboard users */
+    .skip-link {
+      position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden;
+    }
+    .skip-link:focus {
+      left: 12px; top: 12px; width: auto; height: auto; padding: 10px 14px; z-index: 2000;
+      background: var(--brand-2); color: #0b0620; border-radius: 10px; outline: none;
+      box-shadow: var(--shadow-2);
     }
 
+    /* Top navigation */
+    header {
+      position: sticky; top: 0; z-index: 1000; backdrop-filter: saturate(1.2) blur(10px);
+      background: linear-gradient(180deg, rgba(11,11,20,0.78), rgba(11,11,20,0.44));
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
     .nav {
-      display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
-      gap: var(--grid-gap); padding: 14px 0;
+      max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
     }
+    .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text); }
+    .brand img { width: 42px; height: 42px; border-radius: 10px; object-fit: contain; background: rgba(255,255,255,0.04); padding: 6px; }
+    .brand strong { letter-spacing: 0.6px; font-weight: 800; }
 
-    .brand { display: inline-flex; gap: 12px; align-items: center; text-decoration: none; color: inherit; }
-    .brand img { height: 36px; width: 36px; border-radius: 8px; box-shadow: var(--shadow); }
-    .brand span { font-weight: 700; letter-spacing: .2px; font-size: 1.05rem; }
+    .nav a.link { color: var(--muted); text-decoration: none; margin-left: 20px; font-weight: 600; }
+    .nav a.link:hover, .nav a.link:focus { color: var(--text); outline: none; }
 
-    nav[role="navigation"] ul { list-style: none; display: flex; gap: 18px; padding: 0; margin: 0; justify-content: center; }
-    nav a { text-decoration: none; color: var(--muted); font-weight: 600; }
-    nav a:hover, nav a[aria-current="page"] { color: var(--text); }
-
-    .controls { display: flex; justify-content: flex-end; gap: 10px; }
-
-    .btn { --_bg: var(--surface); --_fg: var(--text); appearance: none; border: 1px solid color-mix(in oklab, var(--muted) 20%, transparent);
-      background: linear-gradient(180deg, color-mix(in oklab, var(--_bg) 90%, transparent), var(--_bg));
-      color: var(--_fg); padding: .55rem .85rem; border-radius: 999px; cursor: pointer; font-weight: 700; box-shadow: var(--shadow); transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+    .controls { display: flex; gap: 10px; align-items: center; }
+    .ctrl-btn {
+      border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.04); color: var(--text);
+      padding: 8px 12px; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 700;
     }
-    .btn[aria-pressed="true"], .btn:active { transform: translateY(1px) scale(.99); }
-    .btn:hover { box-shadow: 0 16px 40px hsl(240 10% 3% / .4); }
+    .ctrl-btn:focus { outline: 3px solid var(--focus); outline-offset: 2px; }
 
     /* Hero */
     .hero {
-      position: relative; overflow: clip;
-      padding: clamp(48px, 7vw, 90px) 0 clamp(36px, 6vw, 72px);
-      background: radial-gradient(1200px 1200px at 100% -10%, color-mix(in oklab, var(--brand) 25%, transparent), transparent 60%),
-                  radial-gradient(900px 900px at -10% 120%, color-mix(in oklab, var(--brand-2) 30%, transparent), transparent 60%);
+      position: relative; isolation: isolate;
+      max-width: 1200px; margin: 0 auto; padding: 80px 20px 60px;
+    }
+    .hero-grid {
+      display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 28px; align-items: center;
+    }
+    .headline {
+      font-size: clamp(42px, 7vw, 88px);
+      line-height: 0.98; font-weight: 900; letter-spacing: -0.02em;
+      background: linear-gradient(180deg, #fff, #b9c6ff 45%, #a7ffd7 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      text-wrap: balance;
+    }
+    .kicker { font-size: clamp(16px, 2.2vw, 20px); color: var(--muted); max-width: 58ch; margin-top: 16px; }
+
+    .geom-stage { position: relative; height: min(60vh, 520px); border-radius: var(--radius-xxl);
+      background: linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      border: 1px solid rgba(255,255,255,0.1); overflow: hidden; box-shadow: var(--shadow-1);
+    }
+    .orb, .tri, .sq {
+      position: absolute; opacity: 0.85; filter: drop-shadow(0 8px 18px rgba(0,0,0,0.4));
+      will-change: transform; transform: translateZ(0);
+    }
+    .orb { width: 110px; height: 110px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #fff, rgba(255,255,255,0) 60%),
+                                       radial-gradient(circle at 70% 70%, var(--brand), rgba(122,216,255,0.05));
+      mix-blend-mode: screen; animation: floatY var(--speed-3) ease-in-out infinite alternate;
+    }
+    .tri { width: 0; height: 0; border-left: 64px solid transparent; border-right: 64px solid transparent; border-bottom: 110px solid var(--brand-2);
+      filter: drop-shadow(0 12px 30px rgba(176,124,255,0.35)); opacity: 0.8; animation: floatX var(--speed-2) ease-in-out infinite alternate;
+    }
+    .sq { width: 110px; height: 110px; border-radius: 18px; background: conic-gradient(from 180deg at 50% 50%, rgba(100,255,161,0.95), rgba(122,216,255,0.7), rgba(176,124,255,0.9));
+      transform: rotate(18deg); animation: drift var(--speed-1) linear infinite;
     }
 
-    /* Animated Geometric Canvas */
-    .geom-bg { position: absolute; inset: 0; pointer-events: none; }
-    .geom-bg svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 40px 80px hsl(240 10% 2% / .55)); }
-
-    .hero-grid { position: relative; display: grid; grid-template-columns: 1.1fr .9fr; gap: var(--grid-gap); align-items: center; }
-    @media (max-width: 960px) { .hero-grid { grid-template-columns: 1fr; } }
-
-    .kicker { display: inline-flex; align-items: center; gap: .6rem; font-weight: 800; letter-spacing: .4px; color: var(--brand-2); text-transform: uppercase; font-size: .85rem; }
-    .display {
-      font-size: clamp(2.2rem, 5vw, 4rem);
-      font-weight: 900;
-      letter-spacing: -0.02em;
-      line-height: 1.05;
-      margin: .35rem 0 .8rem;
+    .halo {
+      position: absolute; inset: -30%; background: radial-gradient(closest-side, rgba(122,216,255,0.22), transparent 70%);
+      mask: radial-gradient(closest-side, black, transparent 70%);
+      pointer-events: none; animation: pulse 6s ease-in-out infinite;
     }
-    .lead { font-size: clamp(1.05rem, 2.1vw, 1.25rem); color: var(--muted); max-width: 58ch; }
 
-    .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
-    .btn.primary { --_bg: color-mix(in oklab, var(--brand) 80%, black 0%); }
-    .btn.secondary { --_bg: color-mix(in oklab, var(--brand-2) 80%, black 0%); }
+    @keyframes floatY { from { transform: translateY(-14px); } to { transform: translateY(20px); } }
+    @keyframes floatX { from { transform: translateX(-18px); } to { transform: translateX(22px); } }
+    @keyframes drift { from { transform: translate(0,0) rotate(18deg); } to { transform: translate(10px,-8px) rotate(378deg); } }
+    @keyframes pulse { 0%,100%{ opacity: 0.4;} 50%{ opacity: 0.9; } }
 
-    /* Cards */
-    .cards { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--grid-gap); margin-top: clamp(26px, 4vw, 42px); }
-    .card { grid-column: span 4; background: linear-gradient(180deg, color-mix(in oklab, var(--surface) 86%, transparent), var(--surface));
-      border: 1px solid color-mix(in oklab, var(--muted) 18%, transparent);
-      border-radius: var(--radius); padding: clamp(16px, 2vw, 24px); box-shadow: var(--shadow); position: relative; overflow: clip;
+    /* Quote */
+    .quote { text-align: center; padding: 24px 20px 56px; font-size: clamp(18px, 2.2vw, 24px); color: #dfe8ff;
+      font-weight: 800; letter-spacing: 0.3px; }
+
+    /* Philosophy cards */
+    .cards {
+      max-width: 1200px; margin: 0 auto; padding: 0 20px 80px; display: grid; gap: 24px;
+      grid-template-columns: repeat(3, minmax(240px, 1fr)); perspective: 1200px;
     }
-    .card h3 { margin: 0 0 6px; font-size: 1.15rem; }
-    .card p { margin: 0; color: var(--muted); }
-    .badge { display: inline-flex; gap: .5rem; align-items: center; font-size: .8rem; padding: .3rem .6rem; border-radius: 999px; border: 1px dashed color-mix(in oklab, var(--muted) 30%, transparent); color: var(--muted); }
-    @media (max-width: 1100px) { .card { grid-column: span 6; } }
-    @media (max-width: 720px) { .card { grid-column: span 12; } }
-
-    /* Sections */
-    section { padding: clamp(48px, 8vw, 90px) 0; position: relative; }
-    section header { margin-bottom: clamp(16px, 2vw, 24px); }
-    .h2 { font-size: clamp(1.6rem, 4vw, 2.4rem); letter-spacing: -.02em; margin: 0 0 10px; }
-    .sub { color: var(--muted); max-width: 70ch; }
-
-    /* Pipeline Diagram */
-    .pipeline { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--grid-gap); align-items: center; }
-    .pipe-vis { grid-column: span 7; background: linear-gradient(180deg, color-mix(in oklab, var(--surface) 92%, transparent), var(--surface)); border: 1px solid color-mix(in oklab, var(--muted) 18%, transparent); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
-    .pipe-copy { grid-column: span 5; }
-    @media (max-width: 1000px) { .pipe-vis { grid-column: span 12; } .pipe-copy { grid-column: span 12; }
+    .card {
+      position: relative; border-radius: var(--radius-xl); background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+      border: 1px solid rgba(255,255,255,0.12); padding: 22px; box-shadow: var(--shadow-1); transform-style: preserve-3d;
+      transition: transform 600ms ease, box-shadow 600ms ease, background 600ms ease;
     }
+    .card:hover { transform: translateY(-8px) rotateX(6deg) rotateY(-6deg); box-shadow: var(--shadow-2);
+      background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06)); }
+    .card h3 { margin: 0 0 10px; font-size: 22px; letter-spacing: 0.4px; }
+    .card p { margin: 0; color: var(--muted); line-height: 1.6; }
+    .card .glyph { position: absolute; right: 16px; top: 16px; opacity: 0.45; font-family: var(--font-mono); font-weight: 800; }
+
+    /* Section header */
+    section { scroll-margin-top: 100px; }
+    .section {
+      max-width: 1200px; margin: 0 auto; padding: 80px 20px; position: relative;
+    }
+    .section h2 { font-size: clamp(28px, 3.8vw, 42px); margin: 0 0 14px; letter-spacing: 0.2px; }
+    .section p.lead { color: var(--muted); font-size: 18px; max-width: 70ch; }
+
+    /* Mission: animated entrants from all sides */
+    .mission-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 24px; align-items: start; }
+    .mission-art { position: relative; height: 380px; border-radius: var(--radius-xxl); background: var(--card);
+      border: 1px solid rgba(255,255,255,0.12); overflow: hidden; }
+    .cloud { position: absolute; width: 220px; height: 100px; background: radial-gradient(closest-side, rgba(255,255,255,0.5), rgba(255,255,255,0.12));
+      filter: blur(8px); border-radius: 50px; opacity: 0.7; animation: glide 22s linear infinite; }
+    .cloud.one { left: -20%; top: 20%; }
+    .cloud.two { left: -30%; top: 60%; animation-duration: 28s; }
+    .cloud.three { left: -25%; top: 40%; animation-duration: 26s; }
+    @keyframes glide { from { transform: translateX(0); } to { transform: translateX(180%); } }
+
+    .burst { position: absolute; inset: 0; pointer-events: none; }
+    .burst::before, .burst::after {
+      content: ""; position: absolute; border: 1px dashed rgba(255,255,255,0.18); border-radius: 50%;
+      inset: 18% 18% 18% 18%; animation: pop 6s ease-in-out infinite;
+    }
+    .burst::after { inset: 8% 8% 8% 8%; animation-delay: 1.8s; }
+    @keyframes pop { 0%,100%{ transform: scale(1); opacity: 0.4;} 50%{ transform: scale(1.08); opacity: 0.9;} }
+
+    .checklist { display: grid; gap: 12px; }
+    .check { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; }
+    .tick { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #b8ffda);
+      display: inline-grid; place-items: center; color: #054226; font-weight: 900; }
+
+    /* Research: side-scroll planets carousel */
+    .orbit-wrap { position: relative; border-radius: var(--radius-xxl); background: var(--card); border: 1px solid rgba(255,255,255,0.12);
+      overflow: hidden; }
+    .orbit {
+      display: grid; grid-auto-flow: column; grid-auto-columns: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+    }
+    .orbit::-webkit-scrollbar { display: none; }
+    .planet { position: relative; scroll-snap-align: center; min-height: 420px; padding: 36px; display: grid; grid-template-columns: 1fr 1.1fr; gap: 24px; }
+    .planet .ball { width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #fff, rgba(255,255,255,0) 60%),
+                    radial-gradient(circle at 70% 70%, var(--brand-2), rgba(176,124,255,0.12));
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.12), 0 30px 70px rgba(0,0,0,0.45); align-self: center; justify-self: center;
+      animation: floatY 3.4s ease-in-out infinite alternate; }
+    .planet h3 { margin: 8px 0 8px; font-size: 26px; }
+    .planet p { color: var(--muted); }
+
+    .orbit-indicators { position: absolute; bottom: 14px; left: 0; right: 0; display: flex; justify-content: center; gap: 8px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.22); }
+    .dot.active { background: var(--brand); box-shadow: 0 0 0 2px rgba(122,216,255,0.35); }
+
+    /* Projects: timeline */
+    .timeline { position: relative; margin-top: 12px; }
+    .timeline::before { content: ""; position: absolute; left: 18px; top: 0; bottom: 0; width: 3px; background: linear-gradient(180deg, var(--brand), var(--brand-2)); border-radius: 2px; }
+    .step { position: relative; margin-left: 54px; padding: 18px 18px 18px 18px; border-radius: 18px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: var(--shadow-1); }
+    .step::before { content: ""; position: absolute; left: -44px; top: 16px; width: 28px; height: 28px; border-radius: 50%; background: var(--bg-soft);
+      border: 3px solid var(--accent); box-shadow: 0 0 0 6px rgba(100,255,161,0.15); }
+    .step h4 { margin: 0 0 6px; font-size: 20px; }
+    .mono { font-family: var(--font-mono); color: #e7ffe9; }
+
+    .cta {
+      margin-top: 24px; display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 900; letter-spacing: 0.4px;
+      background: linear-gradient(135deg, var(--brand), var(--accent)); color: #042016; padding: 14px 18px; border-radius: 14px;
+      box-shadow: 0 14px 34px rgba(100,255,161,0.25), 0 10px 26px rgba(122,216,255,0.18); border: 0;
+    }
+    .cta:focus { outline: 3px solid var(--focus); outline-offset: 3px; }
 
     /* Footer */
-    footer { padding: 36px 0 56px; color: var(--muted); border-top: 1px solid color-mix(in oklab, var(--muted) 15%, transparent); }
+    footer { margin-top: 80px; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02); }
+    .footer-inner { max-width: 1200px; margin: 0 auto; padding: 28px 20px; display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+    .small { color: var(--muted); font-size: 14px; }
 
-    /* Animations (respect reduced motion) */
-    @media (prefers-reduced-motion: no-preference) {
-      .float-y { animation: floatY 8s ease-in-out infinite; }
-      .pulse { animation: pulse 2.8s ease-in-out infinite; }
-      .shimmer { background-image: linear-gradient(120deg, transparent, color-mix(in oklab, var(--brand-2) 25%, transparent) 35%, transparent 65%); background-size: 300% 100%; animation: shimmer 3.5s linear infinite; }
-      .fade-in { opacity: 0; transform: translateY(10px); }
-      .fade-in.is-visible { opacity: 1; transform: none; transition: opacity .7s ease, transform .7s ease; }
+    /* Reveal animations */
+    .reveal { opacity: 0; transform: translateY(24px); transition: transform 800ms ease, opacity 800ms ease; }
+    .reveal.in { opacity: 1; transform: none; }
+
+    /* Focus styles for a11y */
+    :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 8px; }
+
+    /* Responsive */
+    @media (max-width: 960px) {
+      .hero-grid, .mission-grid, .planet { grid-template-columns: 1fr; }
+      .geom-stage { height: 46vh; }
+      .planet { min-height: 520px; }
     }
-    @keyframes floatY { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
-    @keyframes pulse { 0%, 100% { opacity: .7 } 50% { opacity: 1 } }
-    @keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -100% 0 } }
 
-    /* Utility */
-    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--grid-gap); }
-    @media (max-width: 900px) { .grid-3 { grid-template-columns: 1fr; } }
-    .muted { color: var(--muted); }
-    .tag { display: inline-block; font-size: .72rem; padding: .22rem .5rem; border-radius: 999px; border: 1px solid color-mix(in oklab, var(--muted) 32%, transparent); color: var(--muted); }
-    .shadow { box-shadow: var(--shadow); }
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+    }
   </style>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to main content</a>
-  <header class="site" role="banner">
-    <div class="wrap nav" aria-label="Global Navigation">
-      <a class="brand" href="#home" aria-label="Whala home">
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <header role="banner" aria-label="Main Navigation">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="#" aria-label="Whala home">
         <img src="logo.png" alt="Whala logo" />
-        <span>Whala</span>
+        <strong>Whala</strong>
       </a>
-      <nav role="navigation" aria-label="Primary">
-        <ul>
-          <li><a href="#mission">Mission</a></li>
-          <li><a href="#projects">Projects</a></li>
-          <li><a href="#pipeline">Pipeline</a></li>
-          <li><a href="#accessibility">Accessibility</a></li>
-          <li><a href="#contact">Contact</a></li>
-        </ul>
-      </nav>
-      <div class="controls" aria-label="Interface controls">
-        <button class="btn" id="themeToggle" aria-pressed="false" aria-label="Toggle light/dark theme">Theme</button>
-        <button class="btn" id="hcToggle" aria-pressed="false" aria-label="Toggle high contrast">High Contrast</button>
-        <button class="btn" id="ttsToggle" aria-pressed="false" aria-label="Toggle text to speech reader (keyboard R)">Reader</button>
+      <div>
+        <a class="link" href="application.html">Our Application</a>
+        <a class="link" href="#projects">Projects</a>
+        <a class="link" href="#mission">Our Mission</a>
+        <a class="link" href="#research">Research</a>
       </div>
-    </div>
+      <div class="controls">
+        <button class="ctrl-btn" id="contrastToggle" aria-pressed="false">High Contrast</button>
+        <button class="ctrl-btn" id="textToggle" aria-pressed="false">A+ Text</button>
+        <button class="ctrl-btn" id="motionToggle" aria-pressed="false">Reduce Motion</button>
+      </div>
+    </nav>
   </header>
 
   <main id="main" tabindex="-1">
-    <section id="home" class="hero" aria-labelledby="homeTitle">
-      <!-- Animated geometry background using SVG for crisp vectors -->
-      <div class="geom-bg" aria-hidden="true">
-        <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Decorative geometric background">
-          <defs>
-            <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="var(--brand)" stop-opacity="0.35" />
-              <stop offset="100%" stop-color="var(--brand-2)" stop-opacity="0.35" />
-            </linearGradient>
-            <linearGradient id="g2" x1="1" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="var(--brand-2)" stop-opacity="0.35" />
-              <stop offset="100%" stop-color="var(--accent)" stop-opacity="0.35" />
-            </linearGradient>
-          </defs>
-          <g class="float-y">
-            <polygon points="0,300 300,0 700,0 400,300" fill="url(#g1)"/>
-            <polygon points="1200,900 1600,500 1600,900" fill="url(#g2)"/>
-            <circle cx="1400" cy="160" r="120" fill="url(#g1)" />
-            <rect x="-60" y="650" width="380" height="380" rx="40" fill="url(#g2)" />
-          </g>
-        </svg>
-      </div>
-
-      <div class="wrap hero-grid">
+    <!-- HERO -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-grid">
         <div>
-          <span class="kicker">Accessible • Ethical • Open</span>
-          <h1 id="homeTitle" class="display">AI for everyone — with accessibility at the core.</h1>
-          <p class="lead">Whala is devoted to making AI usable by people of all abilities. Our work spans medical imaging for eye health, neural search that understands intent, and a ViT‑guided TTS layer enabling eyes‑free access to LLMs.</p>
-          <div class="cta">
-            <a class="btn primary" href="#projects">Explore Projects</a>
-            <a class="btn secondary" href="#contact">Partner With Us</a>
-          </div>
-          <p class="muted" style="margin-top:10px"><span class="tag">Keyboard</span> Press <kbd>R</kbd> to read page. Press <kbd>?</kbd> for help.</p>
+          <h1 id="hero-title" class="headline">AI for everyone. Accessible, safe and free.</h1>
+          <p class="kicker">We're Whala, devoted to foster AI accessibility for all people. We are delving deep into research on how machine learning can diagnose eye illnesses and cure blindness, actively seeking solutions for how to make AI accessible to visually-impaired people and aren't hand waving on AI safety either.</p>
         </div>
-        <div>
-          <div class="cards" aria-label="Highlights">
-            <article class="card fade-in" aria-label="Eye health CNN">
-              <span class="badge">Medical Imaging • CNN</span>
-              <h3>Eye‑ailment detection</h3>
-              <p>Training a convolutional model to identify eye diseases and triage referrals responsibly.</p>
-            </article>
-            <article class="card fade-in" aria-label="Neural search">
-              <span class="badge">Retrieval • Vector Search</span>
-              <h3>Neural understanding</h3>
-              <p>Semantic search that understands the person, task, and context instead of just keywords.</p>
-            </article>
-            <article class="card fade-in" aria-label="ViT‑guided TTS">
-              <span class="badge">Vision Transformer • TTS</span>
-              <h3>Eyes‑free interaction</h3>
-              <p>ViT‑assisted text‑to‑speech that adapts pronunciation and pacing for clarity first.</p>
-            </article>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="mission" aria-labelledby="missionTitle">
-      <div class="wrap">
-        <header>
-          <h2 id="missionTitle" class="h2">Mission</h2>
-          <p class="sub">We design and deploy accessible AI systems that serve people with disabilities from day one—not as an afterthought. That means rigorous accessibility standards, co‑design with blind and low‑vision communities, and transparency about model limits.</p>
-        </header>
-        <div class="grid-3">
-          <article class="card fade-in">
-            <h3>Accessibility by Design</h3>
-            <p>WCAG‑aligned UX, robust keyboard navigation, ARIA labeling, and an optional high‑contrast mode across all surfaces.</p>
-          </article>
-          <article class="card fade-in">
-            <h3>Safety & Evaluation</h3>
-            <p>Datasets audited for bias; models evaluated for false positives/negatives with clinical advisors; continuous monitoring in deployment.</p>
-          </article>
-          <article class="card fade-in">
-            <h3>Open Collaboration</h3>
-            <p>We work with hospitals, universities, and disability advocates to refine training signals and publish accessible benchmarks.</p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section id="projects" aria-labelledby="projectsTitle">
-      <div class="wrap">
-        <header>
-          <h2 id="projectsTitle" class="h2">Projects</h2>
-          <p class="sub">From clinic to conversation, here’s how our stack comes together.</p>
-        </header>
-        <div class="grid-3">
-          <article class="card fade-in">
-            <h3>1) CNN for Eye Ailments</h3>
-            <p>Convolutional network trained on retinal and slit‑lamp images with uncertainty calibration to flag edge cases for human review.</p>
-          </article>
-          <article class="card fade-in">
-            <h3>2) Neural Search</h3>
-            <p>Hybrid retrieval (dense + sparse) with reranking tuned for accessibility—prioritizing clarity, recency, and source reliability.</p>
-          </article>
-          <article class="card fade-in">
-            <h3>3) ViT‑Guided TTS</h3>
-            <p>Vision transformer extracts scene/layout cues; TTS adapts prosody, emphasis, and punctuation pacing so the experience is eyes‑free.</p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section id="pipeline" aria-labelledby="pipelineTitle">
-      <div class="wrap pipeline">
-        <div class="pipe-vis" role="img" aria-label="Model pipeline: CNN → Neural Search → ViT → TTS">
-          <svg viewBox="0 0 900 420" width="100%" height="100%">
+        <div class="geom-stage" aria-hidden="true">
+          <div class="halo"></div>
+          <div class="orb" style="left: 8%; top: 16%;"></div>
+          <div class="tri" style="left: 62%; top: 12%;"></div>
+          <div class="sq"  style="left: 24%; bottom: 10%;"></div>
+          <svg class="wires" width="100%" height="100%" viewBox="0 0 1200 520" preserveAspectRatio="none" style="position:absolute; inset:0; opacity:0.5;">
             <defs>
-              <linearGradient id="node" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="var(--brand)" />
-                <stop offset="100%" stop-color="var(--brand-2)" />
+              <linearGradient id="wireG" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="rgba(122,216,255,0.0)"/>
+                <stop offset="50%" stop-color="rgba(122,216,255,0.5)"/>
+                <stop offset="100%" stop-color="rgba(176,124,255,0.0)"/>
               </linearGradient>
-              <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
-                <path d="M0,0 L8,4 L0,8 z" fill="var(--brand-2)"></path>
-              </marker>
             </defs>
-            <!-- Nodes -->
-            <g>
-              <rect x="30" y="50" width="180" height="120" rx="18" fill="url(#node)" opacity="0.9"></rect>
-              <text x="120" y="115" text-anchor="middle" fill="#000" font-weight="800">CNN</text>
-
-              <rect x="300" y="50" width="210" height="120" rx="18" fill="url(#node)" opacity="0.9"></rect>
-              <text x="405" y="115" text-anchor="middle" fill="#000" font-weight="800">Neural Search</text>
-
-              <rect x="580" y="50" width="140" height="120" rx="18" fill="url(#node)" opacity="0.9"></rect>
-              <text x="650" y="115" text-anchor="middle" fill="#000" font-weight="800">ViT</text>
-
-              <rect x="760" y="50" width="110" height="120" rx="18" fill="url(#node)" opacity="0.9"></rect>
-              <text x="815" y="115" text-anchor="middle" fill="#000" font-weight="800">TTS</text>
-            </g>
-            <!-- Edges -->
-            <g stroke="var(--brand-2)" stroke-width="3" fill="none" marker-end="url(#arrow)">
-              <path d="M210 110 C 250 110, 260 110, 300 110"></path>
-              <path d="M510 110 C 545 110, 545 110, 580 110"></path>
-              <path d="M720 110 C 740 110, 740 110, 760 110"></path>
-            </g>
-            <!-- Moving token along edges (reduced motion safe) -->
-            <g class="token" aria-hidden="true">
-              <circle r="6" fill="var(--accent)">
-                <animateMotion dur="4s" repeatCount="indefinite" keyPoints="0;1" keyTimes="0;1" path="M210 110 C 250 110, 260 110, 300 110" />
-              </circle>
-              <circle r="6" fill="var(--accent)">
-                <animateMotion dur="4s" begin=".3s" repeatCount="indefinite" path="M510 110 C 545 110, 545 110, 580 110" />
-              </circle>
-              <circle r="6" fill="var(--accent)">
-                <animateMotion dur="4s" begin=".6s" repeatCount="indefinite" path="M720 110 C 740 110, 740 110, 760 110" />
-              </circle>
-            </g>
-            <!-- Captions -->
-            <g fill="var(--muted)" font-size="12">
-              <text x="120" y="190" text-anchor="middle">retinal & slit‑lamp images</text>
-              <text x="405" y="190" text-anchor="middle">dense + sparse + rerank</text>
-              <text x="650" y="190" text-anchor="middle">layout cues & emphasis</text>
-              <text x="815" y="190" text-anchor="middle">prosody & clarity</text>
-            </g>
+            <path d="M0,120 C200,40 400,200 600,120 800,40 1000,220 1200,140" stroke="url(#wireG)" stroke-width="2" fill="none"/>
+            <path d="M0,260 C220,210 420,340 620,260 840,180 1020,320 1200,280" stroke="url(#wireG)" stroke-width="2" fill="none"/>
+            <path d="M0,400 C240,360 420,420 640,380 860,340 1000,420 1200,420" stroke="url(#wireG)" stroke-width="2" fill="none"/>
           </svg>
         </div>
-        <div class="pipe-copy">
-          <header>
-            <h2 id="pipelineTitle" class="h2">From image to voice</h2>
-            <p class="sub">The pipeline routes clinical images through a calibrated CNN, uses neural search to fetch grounded explanations, then lets a ViT guide the TTS engine for accessible delivery.</p>
-          </header>
-          <ul>
-            <li><strong>Calibration & Uncertainty:</strong> When the CNN is unsure, a human is looped in.</li>
-            <li><strong>Grounded Responses:</strong> Retrieval attaches citations; hallucinations are minimized.</li>
-            <li><strong>Adaptive Speech:</strong> ViT cues alter pacing for tables, lists, and emphasis.</li>
-          </ul>
-          <div class="cta">
-            <a class="btn primary" href="#accessibility">Try the Reader</a>
-            <a class="btn" href="#contact">Request a demo</a>
+      </div>
+    </section>
+
+    <div class="quote" aria-label="Whala principle">“Let AI make AI accessible.”</div>
+
+    <!-- PHILOSOPHY CARDS -->
+    <section class="cards" aria-label="Philosophies">
+      <article class="card reveal" aria-labelledby="ph1"><span class="glyph">01</span>
+        <h3 id="ph1">Safety</h3>
+        <p>We design with a safety-first mindset: transparent model behavior, red-team driven evals, and human-in-the-loop review.
+           Accessibility means trust — we bake in robust guardrails without compromising utility.</p>
+      </article>
+      <article class="card reveal" aria-labelledby="ph2"><span class="glyph">02</span>
+        <h3 id="ph2">Accessibility</h3>
+        <p>Inclusive by default: screen reader-perfect semantics, high-contrast modes, scalable type, alt-first imagery, and multimodal I/O.
+           We obsess over UX for the visually-impaired community.</p>
+      </article>
+      <article class="card reveal" aria-labelledby="ph3"><span class="glyph">03</span>
+        <h3 id="ph3">Free!</h3>
+        <p>Core access should never be gated. We commit to a generous free tier for essential assistive capabilities — because access is a right, not a perk.</p>
+      </article>
+    </section>
+
+    <!-- MISSION -->
+    <section id="mission" class="section" aria-labelledby="mission-h">
+      <h2 id="mission-h" class="reveal">Our Mission</h2>
+      <p class="lead reveal">We advance assistive intelligence so that anyone — regardless of visual ability — can understand, create, and thrive with AI. We partner with clinicians, ethicists, and affected communities to solve real problems with real-world rigor.</p>
+
+      <div class="mission-grid" style="margin-top: 22px;">
+        <div class="mission-art reveal" aria-hidden="true">
+          <div class="cloud one"></div>
+          <div class="cloud two"></div>
+          <div class="cloud three"></div>
+          <div class="burst"></div>
+        </div>
+        <div class="checklist reveal" role="list">
+          <div class="check" role="listitem"><span class="tick">✓</span>
+            <div><strong>Clinical impact</strong><br/><span class="muted">Tools that help detect eye conditions earlier and more accurately.</span></div>
+          </div>
+          <div class="check" role="listitem"><span class="tick">✓</span>
+            <div><strong>Accessible by design</strong><br/><span class="muted">Everything we ship works with screen readers and keyboard-only use.</span></div>
+          </div>
+          <div class="check" role="listitem"><span class="tick">✓</span>
+            <div><strong>Open knowledge</strong><br/><span class="muted">We share datasets, benchmarks, and methods whenever possible.</span></div>
+          </div>
+          <div class="check" role="listitem"><span class="tick">✓</span>
+            <div><strong>Safety never optional</strong><br/><span class="muted">Rigorous evals + incident response to keep users safe.</span></div>
           </div>
         </div>
       </div>
     </section>
 
-    <section id="accessibility" aria-labelledby="accessTitle">
-      <div class="wrap">
-        <header>
-          <h2 id="accessTitle" class="h2">Built‑in accessibility</h2>
-          <p class="sub">Toggle theme, enable high‑contrast, or use the integrated TTS reader to listen hands‑free. All controls are keyboard‑first and screen‑reader aware.</p>
-        </header>
+    <!-- RESEARCH - PLANETS CAROUSEL -->
+    <section id="research" class="section" aria-labelledby="research-h">
+      <h2 id="research-h" class="reveal">Research</h2>
+      <p class="lead reveal">We explore computer vision for ocular health, accessible interaction design, and alignment techniques tuned for assistive contexts. Below, orbit through a few themes.</p>
 
-        <div class="card fade-in" role="region" aria-label="Reader controls">
-          <form id="readerForm" aria-describedby="readerDesc">
-            <p id="readerDesc" class="muted">Select a voice, then press <strong>Play</strong> to read the current section. Keyboard: <kbd>R</kbd> toggles reading; <kbd>Shift</kbd>+<kbd>R</kbd> stops.</p>
-            <div class="grid-3">
-              <label>
-                <span class="muted">Voice</span>
-                <select id="voiceSelect" aria-label="TTS voice"></select>
-              </label>
-              <label>
-                <span class="muted">Rate</span>
-                <input id="rate" type="range" min="0.6" max="1.6" step="0.05" value="1" aria-label="Speech rate" />
-              </label>
-              <label>
-                <span class="muted">Pitch</span>
-                <input id="pitch" type="range" min="0.6" max="1.6" step="0.05" value="1" aria-label="Speech pitch" />
-              </label>
+      <div class="orbit-wrap reveal" aria-roledescription="carousel" aria-label="Research themes">
+        <div class="orbit" id="orbit" role="group">
+          <div class="planet" aria-label="Theme: Vision for Eyes">
+            <div class="ball" aria-hidden="true"></div>
+            <div>
+              <h3>Learning to See — for Sight</h3>
+              <p>From retinal fundus images to OCT volumes, we build <span class="mono">CNN</span>-based detectors of biomarkers associated with diabetic retinopathy, glaucoma and AMD — prioritizing calibration, uncertainty, and shift-robustness.
+              </p>
             </div>
-            <div class="cta" style="margin-top:12px">
-              <button type="button" class="btn primary" id="playBtn">Play Section</button>
-              <button type="button" class="btn" id="stopBtn">Stop</button>
+          </div>
+          <div class="planet" aria-label="Theme: Interaction & Access">
+            <div class="ball" style="background: radial-gradient(circle at 30% 30%, #fff, rgba(255,255,255,0) 60%), radial-gradient(circle at 70% 70%, var(--brand), rgba(122,216,255,0.12));" aria-hidden="true"></div>
+            <div>
+              <h3>Interfaces You Can Hear & Feel</h3>
+              <p>Lightweight VLM/LLMs paired with automatic TTS, earcons, and haptics so that complex visuals become comprehensible narratives for low-vision users.</p>
             </div>
-          </form>
+          </div>
+          <div class="planet" aria-label="Theme: Alignment & Safety">
+            <div class="ball" style="background: radial-gradient(circle at 30% 30%, #fff, rgba(255,255,255,0) 60%), radial-gradient(circle at 70% 70%, #64ffa1, rgba(100,255,161,0.12));" aria-hidden="true"></div>
+            <div>
+              <h3>Assistive Alignment</h3>
+              <p>Task plans optimized with principled search — combining clinician guidance, user goals, and guardrails to recommend safe, personalized next steps.</p>
+            </div>
+          </div>
+        </div>
+        <div class="orbit-indicators" aria-hidden="true">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
         </div>
       </div>
     </section>
 
-    <section id="contact" aria-labelledby="contactTitle">
-      <div class="wrap">
-        <header>
-          <h2 id="contactTitle" class="h2">Partner with Whala</h2>
-          <p class="sub">Hospitals, universities, and accessibility orgs: let’s collaborate. We’re ready to co‑design, evaluate, and deploy responsibly.</p>
-        </header>
-        <div class="grid-3">
-          <div class="card fade-in">
-            <h3>Clinical partners</h3>
-            <p>Interested in model validation or assistive workflows? We’ll set up a pilot with clear guardrails and IRB alignment.</p>
-          </div>
-          <div class="card fade-in">
-            <h3>Research & education</h3>
-            <p>We share protocols, benchmarks, and curriculum integrations for accessible AI literacy.</p>
-          </div>
-          <div class="card fade-in">
-            <h3>Get in touch</h3>
-            <p>Email <a href="mailto:hello@whala.ai">hello@whala.ai</a> for demos, partnerships, or to join the mission.</p>
-          </div>
-        </div>
+    <!-- PROJECTS -->
+    <section id="projects" class="section" aria-labelledby="projects-h">
+      <h2 id="projects-h" class="reveal">Projects</h2>
+      <p class="lead reveal">Whala, we believe that the true solution doesn't come<br/>
+        through one single primitive, but a synergy, an entire system<br/> of algorithms used in tandem.</p>
+
+      <div class="timeline">
+        <article class="step reveal">
+          <h4>First… A focused visual model</h4>
+          <p>We train a <strong>6–7M parameter Convolutional NN</strong> on real biomarkers and eye disease datasets to help doctors diagnose and treat blind/visually-impaired patients.</p>
+        </article>
+        <article class="step reveal">
+          <h4>Second… Natural language + speech</h4>
+          <p>We use a <strong>lightweight VLM/LLM</strong> with automatic <strong>TTS</strong> for accessibility, summarizing visual content and enabling conversational assistance.</p>
+        </article>
+        <article class="step reveal">
+          <h4>Third… Planning for the long run</h4>
+          <p>For insights, the VLM/LLM has access to the CNN's prediction on the user, then uses an <strong>MCTS</strong> algorithm to assess the <em>best course of action</em> for the user in the future — both in health and in accessibility.</p>
+        </article>
       </div>
+
+      <a class="cta" href="application.html" aria-label="Open Whala application">Open the Application →</a>
     </section>
   </main>
 
-  <footer class="wrap" role="contentinfo">
-    <footer>
-      <div class="wrap" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-        <div>
-          <strong>Whala</strong> — Accessible AI for everyone.
-          <div class="muted">© <span id="year"></span> Whala. All rights reserved.</div>
-        </div>
-        <div class="muted">Made with inclusivity • <a href="#accessibility">Accessibility</a></div>
+  <footer role="contentinfo">
+    <div class="footer-inner">
+      <div class="small">© <span id="year"></span> Whala. Building accessible AI.
+        <span aria-hidden="true">•</span> <a class="link" href="#mission">Mission</a>
+        <span aria-hidden="true">•</span> <a class="link" href="#research">Research</a>
+        <span aria-hidden="true">•</span> <a class="link" href="#projects">Projects</a>
       </div>
-    </footer>
+      <div class="small">Made with care for screen readers & keyboards ♿</div>
+    </div>
   </footer>
 
-  <!-- Live region for announcements -->
-  <div aria-live="polite" aria-atomic="true" class="visually-hidden" id="live"></div>
-
-  <!-- Help modal (minimal, accessible) -->
-  <dialog id="help" aria-labelledby="helpTitle">
-    <h2 id="helpTitle">Keyboard & Accessibility</h2>
-    <ul>
-      <li><kbd>Tab</kbd> to move focus; <kbd>Shift</kbd>+<kbd>Tab</kbd> to go back.</li>
-      <li><kbd>R</kbd> to start/stop reading; <kbd>Shift</kbd>+<kbd>R</kbd> to stop immediately.</li>
-      <li><strong>Theme</strong>: toggles light/dark. <strong>High Contrast</strong>: maximizes contrast.</li>
-      <li><a href="#accessibility">Reader controls</a> to adjust voice, rate, and pitch.</li>
-    </ul>
-    <form method="dialog">
-      <button class="btn" value="ok" autofocus>Close</button>
-    </form>
-  </dialog>
-
+  <!-- Minimal JS for interactivity & accessibility controls -->
   <script>
-    // -----------------------------
-    // Utilities
-    // -----------------------------
-    const $ = (sel, ctx=document) => ctx.querySelector(sel);
-    const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
-    const live = (msg) => { const el = $('#live'); el.textContent = ''; setTimeout(()=>{ el.textContent = msg; }, 10); };
+    // Set dynamic year
+    document.getElementById('year').textContent = new Date().getFullYear();
 
-    // Current year
-    $('#year').textContent = new Date().getFullYear();
+    // IntersectionObserver for reveal animations
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+    }, { threshold: 0.16 });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 
-    // -----------------------------
-    // Theme & High Contrast toggles
-    // -----------------------------
+    // Orbit carousel indicators
+    const orbit = document.getElementById('orbit');
+    const dots = document.querySelectorAll('.dot');
+    function updateDots() {
+      const i = Math.round(orbit.scrollLeft / orbit.clientWidth);
+      dots.forEach((d, idx) => d.classList.toggle('active', idx === i));
+    }
+    orbit.addEventListener('scroll', updateDots, { passive: true });
+    updateDots();
+
+    // Controls: high contrast, text size, reduce motion toggles (persisted)
     const root = document.documentElement;
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-    function applyTheme() {
-      const saved = localStorage.getItem('theme');
-      const hc = localStorage.getItem('hc') === 'true';
-      root.setAttribute('data-hc', hc);
-      if (saved === 'light' || saved === 'dark') {
-        root.setAttribute('data-theme', saved);
-      } else {
-        root.setAttribute('data-theme', prefersDark.matches ? 'dark' : 'light');
-      }
-      $('#themeToggle').setAttribute('aria-pressed', saved === 'dark');
-      $('#hcToggle').setAttribute('aria-pressed', hc);
-    }
-    applyTheme();
+    const contrastToggle = document.getElementById('contrastToggle');
+    const textToggle = document.getElementById('textToggle');
+    const motionToggle = document.getElementById('motionToggle');
 
-    $('#themeToggle').addEventListener('click', () => {
-      const curr = root.getAttribute('data-theme');
-      const next = curr === 'dark' ? 'light' : 'dark';
-      localStorage.setItem('theme', next);
-      applyTheme();
-      live(`Theme set to ${next}.`);
-    });
+    const applyPrefs = () => {
+      const hc = localStorage.getItem('whala_hc') === '1';
+      const lg = localStorage.getItem('whala_lg') === '1';
+      const rm = localStorage.getItem('whala_rm') === '1' || prefersReduced.matches;
 
-    $('#hcToggle').addEventListener('click', () => {
-      const next = !(localStorage.getItem('hc') === 'true');
-      localStorage.setItem('hc', next);
-      applyTheme();
-      live(`High contrast ${next ? 'enabled' : 'disabled'}.`);
-    });
+      contrastToggle.setAttribute('aria-pressed', hc);
+      textToggle.setAttribute('aria-pressed', lg);
+      motionToggle.setAttribute('aria-pressed', rm);
 
-    // -----------------------------
-    // Intersection animations (respect reduced motion)
-    // -----------------------------
-    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      const io = new IntersectionObserver((ents) => {
-        ents.forEach(e => { if (e.isIntersecting) e.target.classList.add('is-visible'); });
-      }, { threshold: 0.15 });
-      $$('.fade-in').forEach(el => io.observe(el));
-    }
+      root.style.setProperty('--bg', hc ? '#000' : '#0b0b14');
+      root.style.setProperty('--text', hc ? '#fff' : '#f7f7fb');
+      root.style.setProperty('--muted', hc ? '#eaeaea' : '#b9b9c9');
+      document.body.style.fontSize = lg ? '18px' : '';
 
-    // -----------------------------
-    // TTS Reader (Web Speech API)
-    // -----------------------------
-    const synth = window.speechSynthesis;
-    const voiceSelect = $('#voiceSelect');
-    const rate = $('#rate');
-    const pitch = $('#pitch');
-    let voices = [];
-    let reading = false;
-
-    function populateVoices() {
-      voices = synth.getVoices().sort((a,b)=>a.name.localeCompare(b.name));
-      voiceSelect.innerHTML = voices.map((v,i)=>`<option value="${i}">${v.name} ${v.lang.includes('en') ? '(EN)' : ''}</option>`).join('');
-    }
-    populateVoices();
-    if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = populateVoices;
-
-    function speak(el) {
-      if (!('speechSynthesis' in window)) { alert('TTS not supported in this browser.'); return; }
-      stop();
-      const text = el.innerText.trim();
-      if (!text) return;
-      const utter = new SpeechSynthesisUtterance(text);
-      const v = voices[voiceSelect.value|0];
-      if (v) utter.voice = v;
-      utter.rate = parseFloat(rate.value);
-      utter.pitch = parseFloat(pitch.value);
-      utter.onend = () => { reading = false; $('#ttsToggle').setAttribute('aria-pressed','false'); };
-      synth.speak(utter); reading = true; $('#ttsToggle').setAttribute('aria-pressed','true');
-    }
-
-    function stop(){ if (synth.speaking || synth.pending) synth.cancel(); reading = false; $('#ttsToggle').setAttribute('aria-pressed','false'); }
-
-    // Buttons
-    $('#playBtn').addEventListener('click', ()=>{
-      const sec = document.activeElement.closest('section') || $('#main');
-      speak(sec);
-      live('Reading started.');
-    });
-    $('#stopBtn').addEventListener('click', ()=>{ stop(); live('Reading stopped.'); });
-
-    // Global toggle
-    $('#ttsToggle').addEventListener('click', () => {
-      if (reading) { stop(); live('Reader off.'); } else { speak($('#main')); live('Reader on.'); }
-    });
-
-    // Keyboard shortcuts: R to toggle, Shift+R to stop, ? for help
-    window.addEventListener('keydown', (e) => {
-      const tag = (e.target.tagName||'').toLowerCase();
-      const typing = tag === 'input' || tag === 'textarea' || e.isComposing;
-      if (typing) return;
-      if (e.key.toLowerCase() === 'r' && e.shiftKey) { stop(); live('Stopped.'); }
-      else if (e.key.toLowerCase() === 'r') { e.preventDefault(); reading ? stop() : speak($('#main')); }
-      else if (e.key === '?') { e.preventDefault(); $('#help').showModal(); }
-      else if (e.key === 'Escape' && $('#help').open) { $('#help').close(); }
-    });
-
-    // -----------------------------
-    // Nav current link highlighting
-    // -----------------------------
-    const sections = ['home','mission','projects','pipeline','accessibility','contact'].map(id=>({ id, el: document.getElementById(id) }));
-    const navLinks = $$('nav[role="navigation"] a');
-    const navIO = new IntersectionObserver((ents)=>{
-      ents.forEach(ent=>{
-        if(ent.isIntersecting) {
-          navLinks.forEach(a=>a.removeAttribute('aria-current'));
-          const link = $$(`nav a[href="#${ent.target.id}"]`)[0];
-          if (link) link.setAttribute('aria-current','page');
+      document.querySelectorAll('*').forEach(el => {
+        if (rm) {
+          el.style.animation = 'none';
+          el.style.transition = 'none';
+        } else {
+          el.style.animation = '';
+          el.style.transition = '';
         }
       });
-    }, { threshold:.6 });
-    sections.forEach(s=>navIO.observe(s.el));
-  </script>
+    };
 
-  <!-- Structured data -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "Whala",
-    "url": "https://example.com",
-    "logo": "logo.png",
-    "sameAs": [],
-    "slogan": "Accessible AI for everyone",
-    "description": "Whala makes AI accessible to all — especially people with disabilities. Projects include a CNN for eye ailments, neural search, and ViT-guided TTS.",
-    "foundingDate": "2025",
-    "knowsAbout": ["accessibility", "assistive technology", "medical imaging", "text-to-speech", "vision transformer", "neural search"]
-  }
+    contrastToggle.addEventListener('click', () => {
+      const v = localStorage.getItem('whala_hc') === '1' ? '0' : '1';
+      localStorage.setItem('whala_hc', v); applyPrefs();
+    });
+    textToggle.addEventListener('click', () => {
+      const v = localStorage.getItem('whala_lg') === '1' ? '0' : '1';
+      localStorage.setItem('whala_lg', v); applyPrefs();
+    });
+    motionToggle.addEventListener('click', () => {
+      const base = localStorage.getItem('whala_rm') === '1';
+      localStorage.setItem('whala_rm', base ? '0' : '1'); applyPrefs();
+    });
+
+    applyPrefs();
+
+    // Subtle parallax on hero geometry (mouse move)
+    const stage = document.querySelector('.geom-stage');
+    const movers = stage.querySelectorAll('.orb, .tri, .sq');
+    stage.addEventListener('pointermove', (e) => {
+      const r = stage.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - 0.5;
+      const y = (e.clientY - r.top) / r.height - 0.5;
+      movers.forEach((el, i) => {
+        const depth = (i + 1) * 8;
+        el.style.transform = `translate(${x*depth}px, ${y*depth}px)`;
+      });
+    });
+    stage.addEventListener('pointerleave', () => movers.forEach(el => el.style.transform = ''));    
+
+    // Keyboard shortcuts: Left/Right to navigate research carousel when focused
+    document.getElementById('research-h').setAttribute('tabindex', '-1');
+    orbit.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') orbit.scrollBy({ left: orbit.clientWidth, behavior: 'smooth' });
+      if (e.key === 'ArrowLeft') orbit.scrollBy({ left: -orbit.clientWidth, behavior: 'smooth' });
+    });
   </script>
 </body>
 </html>
