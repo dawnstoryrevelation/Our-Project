@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Whala — Accessible AI for Everyone</title>
+  <meta name="description" content="Whala makes AI accessible to all — especially people with disabilities. Explore our projects: medical imaging CNN for eye ailments, neural search, and ViT‑guided TTS for seamless, eyes‑free AI access." />
+  <meta name="color-scheme" content="light dark" />
+  <link rel="icon" href="logo.png" />
+  <style>
+    /* -----------------------------
+       Design System
+    ------------------------------*/
+    :root {
+      --bg: hsl(240 10% 4%);
+      --surface: hsl(240 10% 7%);
+      --text: hsl(0 0% 98%);
+      --muted: hsl(240 5% 70%);
+      --brand: hsl(264 100% 61%);
+      --brand-2: hsl(198 100% 55%);
+      --accent: hsl(40 100% 60%);
+      --ok: hsl(150 70% 45%);
+      --warn: hsl(16 90% 55%);
+      --shadow: 0 10px 30px hsl(240 10% 3% / 0.35);
+      --radius: 22px;
+      --radius-sm: 14px;
+      --ring: 0 0 0 3px hsl(198 100% 55% / .35);
+      --maxw: 1200px;
+      --grid-gap: clamp(16px, 2.5vw, 28px);
+    }
+    
+    [data-theme="light"]:root {
+      --bg: hsl(0 0% 100%);
+      --surface: hsl(0 0% 98%);
+      --text: hsl(240 10% 6%);
+      --muted: hsl(240 5% 45%);
+      --shadow: 0 10px 30px hsl(240 10% 30% / 0.18);
+    }
+
+    [data-hc="true"]:root {
+      --bg: #000;
+      --surface: #000;
+      --text: #fff;
+      --muted: #fff;
+      --brand: #fff;
+      --brand-2: #fff;
+      --accent: #fff;
+      --shadow: none;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      text-rendering: optimizeLegibility;
+    }
+
+    /* Focus & helpers */
+    :focus-visible { outline: none; box-shadow: var(--ring); border-radius: 10px; }
+    .visually-hidden { position: absolute !important; height: 1px; width: 1px; overflow: hidden; clip: rect(1px, 1px, 1px, 1px); white-space: nowrap; }
+    .skip-link { position: absolute; left: -999px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+    .skip-link:focus { left: 12px; top: 12px; width: auto; height: auto; padding: .6rem 1rem; background: var(--brand-2); color: #000; border-radius: 999px; box-shadow: var(--shadow); z-index: 10000; }
+
+    /* Layout */
+    .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 clamp(16px, 2vw, 28px); }
+    header.site {
+      position: sticky; top: 0; z-index: 1000;
+      background: linear-gradient(180deg, var(--bg), color-mix(in oklab, var(--bg) 80%, transparent));
+      backdrop-filter: saturate(140%) blur(8px);
+      border-bottom: 1px solid color-mix(in oklab, var(--muted) 15%, transparent);
+    }
+
+    .nav {
+      display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+      gap: var(--grid-gap); padding: 14px 0;
+    }
+
+    .brand { display: inline-flex; gap: 12px; align-items: center; text-decoration: none; color: inherit; }
+    .brand img { height: 36px; width: 36px; border-radius: 8px; box-shadow: var(--shadow); }
+    .brand span { font-weight: 700; letter-spacing: .2px; font-size: 1.05rem; }
+
+    nav[role="navigation"] ul { list-style: none; display: flex; gap: 18px; padding: 0; margin: 0; justify-content: center; }
+    nav a { text-decoration: none; color: var(--muted); font-weight: 600; }
+    nav a:hover, nav a[aria-current="page"] { color: var(--text); }
+
+    .controls { display: flex; justify-content: flex-end; gap: 10px; }
+
+    .btn { --_bg: var(--surface); --_fg: var(--text); appearance: none; border: 1px solid color-mix(in oklab, var(--muted) 20%, transparent);
+      background: linear-gradient(180deg, color-mix(in oklab, var(--_bg) 90%, transparent), var(--_bg));
+      color: var(--_fg); padding: .55rem .85rem; border-radius: 999px; cursor: pointer; font-weight: 700; box-shadow: var(--shadow); transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .btn[aria-pressed="true"], .btn:active { transform: translateY(1px) scale(.99); }
+    .btn:hover { box-shadow: 0 16px 40px hsl(240 10% 3% / .4); }
+
+    /* Hero */
+    .hero {
+      position: relative; overflow: clip;
+      padding: clamp(48px, 7vw, 90px) 0 clamp(36px, 6vw, 72px);
+      background: radial-gradient(1200px 1200px at 100% -10%, color-mix(in oklab, var(--brand) 25%, transparent), transparent 60%),
+                  radial-gradient(900px 900px at -10% 120%, color-mix(in oklab, var(--brand-2) 30%, transparent), transparent 60%);
+    }
+
+    /* Animated Geometric Canvas */
+    .geom-bg { position: absolute; inset: 0; pointer-events: none; }
+    .geom-bg svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 40px 80px hsl(240 10% 2% / .55)); }
+
+    .hero-grid { position: relative; display: grid; grid-template-columns: 1.1fr .9fr; gap: var(--grid-gap); align-items: center; }
+    @media (max-width: 960px) { .hero-grid { grid-template-columns: 1fr; } }
+
+    .kicker { display: inline-flex; align-items: center; gap: .6rem; font-weight: 800; letter-spacing: .4px; color: var(--brand-2); text-transform: uppercase; font-size: .85rem; }
+    .display {
+      font-size: clamp(2.2rem, 5vw, 4rem);
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+      margin: .35rem 0 .8rem;
+    }
+    .lead { font-size: clamp(1.05rem, 2.1vw, 1.25rem); color: var(--muted); max-width: 58ch; }
+
+    .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+    .btn.primary { --_bg: color-mix(in oklab, var(--brand) 80%, black 0%); }
+    .btn.secondary { --_bg: color-mix(in oklab, var(--brand-2) 80%, black 0%); }
+
+    /* Cards */
+    .cards { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--grid-gap); margin-top: clamp(26px, 4vw, 42px); }
+    .card { grid-column: span 4; background: linear-gradient(180deg, color-mix(in oklab, var(--surface) 86%, transparent), var(--surface));
+      border: 1px solid color-mix(in oklab, var(--muted) 18%, transparent);
+      border-radius: var(--radius); padding: clamp(16px, 2vw, 24px); box-shadow: var(--shadow); position: relative; overflow: clip;
+    }
+    .card h3 { margin: 0 0 6px; font-size: 1.15rem; }
+    .card p { margin: 0; color: var(--muted); }
+    .badge { display: inline-flex; gap: .5rem; align-items: center; font-size: .8rem; padding: .3rem .6rem; border-radius: 999px; border: 1px dashed color-mix(in oklab, var(--muted) 30%, transparent); color: var(--muted); }
+    @media (max-width: 1100px) { .card { grid-column: span 6; } }
+    @media (max-width: 720px) { .card { grid-column: span 12; } }
+
+    /* Sections */
+    section { padding: clamp(48px, 8vw, 90px) 0; position: relative; }
+    section header { margin-bottom: clamp(16px, 2vw, 24px); }
+    .h2 { font-size: clamp(1.6rem, 4vw, 2.4rem); letter-spacing: -.02em; margin: 0 0 10px; }
+    .sub { color: var(--muted); max-width: 70ch; }
+
+    /* Pipeline Diagram */
+    .pipeline { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--grid-gap); align-items: center; }
+    .pipe-vis { grid-column: span 7; background: linear-gradient(180deg, color-mix(in oklab, var(--surface) 92%, transparent), var(--surface)); border: 1px solid color-mix(in oklab, var(--muted) 18%, transparent); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
+    .pipe-copy { grid-column: span 5; }
+    @media (max-width: 1000px) { .pipe-vis { grid-column: span 12; } .pipe-copy { grid-column: span 12; }
+    }
+
+    /* Footer */
+    footer { padding: 36px 0 56px; color: var(--muted); border-top: 1px solid color-mix(in oklab, var(--muted) 15%, transparent); }
+
+    /* Animations (respect reduced motion) */
+    @media (prefers-reduced-motion: no-preference) {
+      .float-y { animation: floatY 8s ease-in-out infinite; }
+      .pulse { animation: pulse 2.8s ease-in-out infinite; }
+      .shimmer { background-image: linear-gradient(120deg, transparent, color-mix(in oklab, var(--brand-2) 25%, transparent) 35%, transparent 65%); background-size: 300% 100%; animation: shimmer 3.5s linear infinite; }
+      .fade-in { opacity: 0; transform: translateY(10px); }
+      .fade-in.is-visible { opacity: 1; transform: none; transition: opacity .7s ease, transform .7s ease; }
+    }
+    @keyframes floatY { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
+    @keyframes pulse { 0%, 100% { opacity: .7 } 50% { opacity: 1 } }
+    @keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -100% 0 } }
+
+    /* Utility */
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--grid-gap); }
+    @media (max-width: 900px) { .grid-3 { grid-template-columns: 1fr; } }
+    .muted { color: var(--muted); }
+    .tag { display: inline-block; font-size: .72rem; padding: .22rem .5rem; border-radius: 999px; border: 1px solid color-mix(in oklab, var(--muted) 32%, transparent); color: var(--muted); }
+    .shadow { box-shadow: var(--shadow); }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <header class="site" role="banner">
+    <div class="wrap nav" aria-label="Global Navigation">
+      <a class="brand" href="#home" aria-label="Whala home">
+        <img src="logo.png" alt="Whala logo" />
+        <span>Whala</span>
+      </a>
+      <nav role="navigation" aria-label="Primary">
+        <ul>
+          <li><a href="#mission">Mission</a></li>
+          <li><a href="#projects">Projects</a></li>
+          <li><a href="#pipeline">Pipeline</a></li>
+          <li><a href="#accessibility">Accessibility</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </nav>
+      <div class="controls" aria-label="Interface controls">
+        <button class="btn" id="themeToggle" aria-pressed="false" aria-label="Toggle light/dark theme">Theme</button>
+        <button class="btn" id="hcToggle" aria-pressed="false" aria-label="Toggle high contrast">High Contrast</button>
+        <button class="btn" id="ttsToggle" aria-pressed="false" aria-label="Toggle text to speech reader (keyboard R)">Reader</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1">
+    <section id="home" class="hero" aria-labelledby="homeTitle">
+      <!-- Animated geometry background using SVG for crisp vectors -->
+      <div class="geom-bg" aria-hidden="true">
+        <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Decorative geometric background">
+          <defs>
+            <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="var(--brand)" stop-opacity="0.35" />
+              <stop offset="100%" stop-color="var(--brand-2)" stop-opacity="0.35" />
+            </linearGradient>
+            <linearGradient id="g2" x1="1" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--brand-2)" stop-opacity="0.35" />
+              <stop offset="100%" stop-color="var(--accent)" stop-opacity="0.35" />
+            </linearGradient>
+          </defs>
+          <g class="float-y">
+            <polygon points="0,300 300,0 700,0 400,300" fill="url(#g1)"/>
+            <polygon points="1200,900 1600,500 1600,900" fill="url(#g2)"/>
+            <circle cx="1400" cy="160" r="120" fill="url(#g1)" />
+            <rect x="-60" y="650" width="380" height="380" rx="40" fill="url(#g2)" />
+          </g>
+        </svg>
+      </div>
+
+      <div class="wrap hero-grid">
+        <div>
+          <span class="kicker">Accessible • Ethical • Open</span>
+          <h1 id="homeTitle" class="display">AI for everyone — with accessibility at the core.</h1>
+          <p class="lead">Whala is devoted to making AI usable by people of all abilities. Our work spans medical imaging for eye health, neural search that understands intent, and a ViT‑guided TTS layer enabling eyes‑free access to LLMs.</p>
+          <div class="cta">
+            <a class="btn primary" href="#projects">Explore Projects</a>
+            <a class="btn secondary" href="#contact">Partner With Us</a>
+          </div>
+          <p class="muted" style="margin-top:10px"><span class="tag">Keyboard</span> Press <kbd>R</kbd> to read page. Press <kbd>?</kbd> for help.</p>
+        </div>
+        <div>
+          <div class="cards" aria-label="Highlights">
+            <article class="card fade-in" aria-label="Eye health CNN">
+              <span class="badge">Medical Imaging • CNN</span>
+              <h3>Eye‑ailment detection</h3>
+              <p>Training a convolutional model to identify eye diseases and triage referrals responsibly.</p>
+            </article>
+            <article class="card fade-in" aria-label="Neural search">
+              <span class="badge">Retrieval • Vector Search</span>
+              <h3>Neural understanding</h3>
+              <p>Semantic search that understands the person, task, and context instead of just keywords.</p>
+            </article>
+            <article class="card fade-in" aria-label="ViT‑guided TTS">
+              <span class="badge">Vision Transformer • TTS</span>
+              <h3>Eyes‑free interaction</h3>
+              <p>ViT‑assisted text‑to‑speech that adapts pronunciation and pacing for clarity first.</p>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="mission" aria-labelledby="missionTitle">
+      <div class="wrap">
+        <header>
+          <h2 id="missionTitle" class="h2">Mission</h2>
+          <p class="sub">We design and deploy accessible AI systems that serve people with disabilities from day one—not as an afterthought. That means rigorous accessibility standards, co‑design with blind and low‑vision communities, and transparency about model limits.</p>
+        </header>
+        <div class="grid-3">
+          <article class="card fade-in">
+            <h3>Accessibility by Design</h3>
+            <p>WCAG‑aligned UX, robust keyboard navigation, ARIA labeling, and an optional high‑contrast mode across all surfaces.</p>
+          </article>
+          <article class="card fade-in">
+            <h3>Safety & Evaluation</h3>
+            <p>Datasets audited for bias; models evaluated for false positives/negatives with clinical advisors; continuous monitoring in deployment.</p>
+          </article>
+          <article class="card fade-in">
+            <h3>Open Collaboration</h3>
+            <p>We work with hospitals, universities, and disability advocates to refine training signals and publish accessible benchmarks.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="projects" aria-labelledby="projectsTitle">
+      <div class="wrap">
+        <header>
+          <h2 id="projectsTitle" class="h2">Projects</h2>
+          <p class="sub">From clinic to conversation, here’s how our stack comes together.</p>
+        </header>
+        <div class="grid-3">
+          <article class="card fade-in">
+            <h3>1) CNN for Eye Ailments</h3>
+            <p>Convolutional network trained on retinal and slit‑lamp images with uncertainty calibration to flag edge cases for human review.</p>
+          </article>
+          <article class="card fade-in">
+            <h3>2) Neural Search</h3>
+            <p>Hybrid retrieval (dense + sparse) with reranking tuned for accessibility—prioritizing clarity, recency, and source reliability.</p>
+          </article>
+          <article class="card fade-in">
+            <h3>3) ViT‑Guided TTS</h3>
+            <p>Vision transformer extracts scene/layout cues; TTS adapts prosody, emphasis, and punctuation pacing so the experience is eyes‑free.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="pipeline" aria-labelledby="pipelineTitle">
+      <div class="wrap pipeline">
+        <div class="pipe-vis" role="img" aria-label="Model pipeline: CNN → Neural Search → ViT → TTS">
+          <svg viewBox="0 0 900 420" width="100%" height="100%">
+            <defs>
+              <linearGradient id="node" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="var(--brand)" />
+                <stop offset="100%" stop-color="var(--brand-2)" />
+              </linearGradient>
+              <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                <path d="M0,0 L8,4 L0,8 z" fill="var(--brand-2)"></path>
+              </marker>
+            </defs>
+            <!-- Nodes -->
+            <g>
+              <rect x="30" y="50" width="180" height="120" rx="18" fill="url(#node)" opacity="0.9"></rect>
+              <text x="120" y="115" text-anchor="middle" fill="#000" font-weight="800">CNN</text>
+
+              <rect x="300" y="50" width="210" height="120" rx="18" fill="url(#node)" opacity="0.9"></rect>
+              <text x="405" y="115" text-anchor="middle" fill="#000" font-weight="800">Neural Search</text>
+
+              <rect x="580" y="50" width="140" height="120" rx="18" fill="url(#node)" opacity="0.9"></rect>
+              <text x="650" y="115" text-anchor="middle" fill="#000" font-weight="800">ViT</text>
+
+              <rect x="760" y="50" width="110" height="120" rx="18" fill="url(#node)" opacity="0.9"></rect>
+              <text x="815" y="115" text-anchor="middle" fill="#000" font-weight="800">TTS</text>
+            </g>
+            <!-- Edges -->
+            <g stroke="var(--brand-2)" stroke-width="3" fill="none" marker-end="url(#arrow)">
+              <path d="M210 110 C 250 110, 260 110, 300 110"></path>
+              <path d="M510 110 C 545 110, 545 110, 580 110"></path>
+              <path d="M720 110 C 740 110, 740 110, 760 110"></path>
+            </g>
+            <!-- Moving token along edges (reduced motion safe) -->
+            <g class="token" aria-hidden="true">
+              <circle r="6" fill="var(--accent)">
+                <animateMotion dur="4s" repeatCount="indefinite" keyPoints="0;1" keyTimes="0;1" path="M210 110 C 250 110, 260 110, 300 110" />
+              </circle>
+              <circle r="6" fill="var(--accent)">
+                <animateMotion dur="4s" begin=".3s" repeatCount="indefinite" path="M510 110 C 545 110, 545 110, 580 110" />
+              </circle>
+              <circle r="6" fill="var(--accent)">
+                <animateMotion dur="4s" begin=".6s" repeatCount="indefinite" path="M720 110 C 740 110, 740 110, 760 110" />
+              </circle>
+            </g>
+            <!-- Captions -->
+            <g fill="var(--muted)" font-size="12">
+              <text x="120" y="190" text-anchor="middle">retinal & slit‑lamp images</text>
+              <text x="405" y="190" text-anchor="middle">dense + sparse + rerank</text>
+              <text x="650" y="190" text-anchor="middle">layout cues & emphasis</text>
+              <text x="815" y="190" text-anchor="middle">prosody & clarity</text>
+            </g>
+          </svg>
+        </div>
+        <div class="pipe-copy">
+          <header>
+            <h2 id="pipelineTitle" class="h2">From image to voice</h2>
+            <p class="sub">The pipeline routes clinical images through a calibrated CNN, uses neural search to fetch grounded explanations, then lets a ViT guide the TTS engine for accessible delivery.</p>
+          </header>
+          <ul>
+            <li><strong>Calibration & Uncertainty:</strong> When the CNN is unsure, a human is looped in.</li>
+            <li><strong>Grounded Responses:</strong> Retrieval attaches citations; hallucinations are minimized.</li>
+            <li><strong>Adaptive Speech:</strong> ViT cues alter pacing for tables, lists, and emphasis.</li>
+          </ul>
+          <div class="cta">
+            <a class="btn primary" href="#accessibility">Try the Reader</a>
+            <a class="btn" href="#contact">Request a demo</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="accessibility" aria-labelledby="accessTitle">
+      <div class="wrap">
+        <header>
+          <h2 id="accessTitle" class="h2">Built‑in accessibility</h2>
+          <p class="sub">Toggle theme, enable high‑contrast, or use the integrated TTS reader to listen hands‑free. All controls are keyboard‑first and screen‑reader aware.</p>
+        </header>
+
+        <div class="card fade-in" role="region" aria-label="Reader controls">
+          <form id="readerForm" aria-describedby="readerDesc">
+            <p id="readerDesc" class="muted">Select a voice, then press <strong>Play</strong> to read the current section. Keyboard: <kbd>R</kbd> toggles reading; <kbd>Shift</kbd>+<kbd>R</kbd> stops.</p>
+            <div class="grid-3">
+              <label>
+                <span class="muted">Voice</span>
+                <select id="voiceSelect" aria-label="TTS voice"></select>
+              </label>
+              <label>
+                <span class="muted">Rate</span>
+                <input id="rate" type="range" min="0.6" max="1.6" step="0.05" value="1" aria-label="Speech rate" />
+              </label>
+              <label>
+                <span class="muted">Pitch</span>
+                <input id="pitch" type="range" min="0.6" max="1.6" step="0.05" value="1" aria-label="Speech pitch" />
+              </label>
+            </div>
+            <div class="cta" style="margin-top:12px">
+              <button type="button" class="btn primary" id="playBtn">Play Section</button>
+              <button type="button" class="btn" id="stopBtn">Stop</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section id="contact" aria-labelledby="contactTitle">
+      <div class="wrap">
+        <header>
+          <h2 id="contactTitle" class="h2">Partner with Whala</h2>
+          <p class="sub">Hospitals, universities, and accessibility orgs: let’s collaborate. We’re ready to co‑design, evaluate, and deploy responsibly.</p>
+        </header>
+        <div class="grid-3">
+          <div class="card fade-in">
+            <h3>Clinical partners</h3>
+            <p>Interested in model validation or assistive workflows? We’ll set up a pilot with clear guardrails and IRB alignment.</p>
+          </div>
+          <div class="card fade-in">
+            <h3>Research & education</h3>
+            <p>We share protocols, benchmarks, and curriculum integrations for accessible AI literacy.</p>
+          </div>
+          <div class="card fade-in">
+            <h3>Get in touch</h3>
+            <p>Email <a href="mailto:hello@whala.ai">hello@whala.ai</a> for demos, partnerships, or to join the mission.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap" role="contentinfo">
+    <footer>
+      <div class="wrap" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <div>
+          <strong>Whala</strong> — Accessible AI for everyone.
+          <div class="muted">© <span id="year"></span> Whala. All rights reserved.</div>
+        </div>
+        <div class="muted">Made with inclusivity • <a href="#accessibility">Accessibility</a></div>
+      </div>
+    </footer>
+  </footer>
+
+  <!-- Live region for announcements -->
+  <div aria-live="polite" aria-atomic="true" class="visually-hidden" id="live"></div>
+
+  <!-- Help modal (minimal, accessible) -->
+  <dialog id="help" aria-labelledby="helpTitle">
+    <h2 id="helpTitle">Keyboard & Accessibility</h2>
+    <ul>
+      <li><kbd>Tab</kbd> to move focus; <kbd>Shift</kbd>+<kbd>Tab</kbd> to go back.</li>
+      <li><kbd>R</kbd> to start/stop reading; <kbd>Shift</kbd>+<kbd>R</kbd> to stop immediately.</li>
+      <li><strong>Theme</strong>: toggles light/dark. <strong>High Contrast</strong>: maximizes contrast.</li>
+      <li><a href="#accessibility">Reader controls</a> to adjust voice, rate, and pitch.</li>
+    </ul>
+    <form method="dialog">
+      <button class="btn" value="ok" autofocus>Close</button>
+    </form>
+  </dialog>
+
+  <script>
+    // -----------------------------
+    // Utilities
+    // -----------------------------
+    const $ = (sel, ctx=document) => ctx.querySelector(sel);
+    const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
+    const live = (msg) => { const el = $('#live'); el.textContent = ''; setTimeout(()=>{ el.textContent = msg; }, 10); };
+
+    // Current year
+    $('#year').textContent = new Date().getFullYear();
+
+    // -----------------------------
+    // Theme & High Contrast toggles
+    // -----------------------------
+    const root = document.documentElement;
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+
+    function applyTheme() {
+      const saved = localStorage.getItem('theme');
+      const hc = localStorage.getItem('hc') === 'true';
+      root.setAttribute('data-hc', hc);
+      if (saved === 'light' || saved === 'dark') {
+        root.setAttribute('data-theme', saved);
+      } else {
+        root.setAttribute('data-theme', prefersDark.matches ? 'dark' : 'light');
+      }
+      $('#themeToggle').setAttribute('aria-pressed', saved === 'dark');
+      $('#hcToggle').setAttribute('aria-pressed', hc);
+    }
+    applyTheme();
+
+    $('#themeToggle').addEventListener('click', () => {
+      const curr = root.getAttribute('data-theme');
+      const next = curr === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('theme', next);
+      applyTheme();
+      live(`Theme set to ${next}.`);
+    });
+
+    $('#hcToggle').addEventListener('click', () => {
+      const next = !(localStorage.getItem('hc') === 'true');
+      localStorage.setItem('hc', next);
+      applyTheme();
+      live(`High contrast ${next ? 'enabled' : 'disabled'}.`);
+    });
+
+    // -----------------------------
+    // Intersection animations (respect reduced motion)
+    // -----------------------------
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const io = new IntersectionObserver((ents) => {
+        ents.forEach(e => { if (e.isIntersecting) e.target.classList.add('is-visible'); });
+      }, { threshold: 0.15 });
+      $$('.fade-in').forEach(el => io.observe(el));
+    }
+
+    // -----------------------------
+    // TTS Reader (Web Speech API)
+    // -----------------------------
+    const synth = window.speechSynthesis;
+    const voiceSelect = $('#voiceSelect');
+    const rate = $('#rate');
+    const pitch = $('#pitch');
+    let voices = [];
+    let reading = false;
+
+    function populateVoices() {
+      voices = synth.getVoices().sort((a,b)=>a.name.localeCompare(b.name));
+      voiceSelect.innerHTML = voices.map((v,i)=>`<option value="${i}">${v.name} ${v.lang.includes('en') ? '(EN)' : ''}</option>`).join('');
+    }
+    populateVoices();
+    if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = populateVoices;
+
+    function speak(el) {
+      if (!('speechSynthesis' in window)) { alert('TTS not supported in this browser.'); return; }
+      stop();
+      const text = el.innerText.trim();
+      if (!text) return;
+      const utter = new SpeechSynthesisUtterance(text);
+      const v = voices[voiceSelect.value|0];
+      if (v) utter.voice = v;
+      utter.rate = parseFloat(rate.value);
+      utter.pitch = parseFloat(pitch.value);
+      utter.onend = () => { reading = false; $('#ttsToggle').setAttribute('aria-pressed','false'); };
+      synth.speak(utter); reading = true; $('#ttsToggle').setAttribute('aria-pressed','true');
+    }
+
+    function stop(){ if (synth.speaking || synth.pending) synth.cancel(); reading = false; $('#ttsToggle').setAttribute('aria-pressed','false'); }
+
+    // Buttons
+    $('#playBtn').addEventListener('click', ()=>{
+      const sec = document.activeElement.closest('section') || $('#main');
+      speak(sec);
+      live('Reading started.');
+    });
+    $('#stopBtn').addEventListener('click', ()=>{ stop(); live('Reading stopped.'); });
+
+    // Global toggle
+    $('#ttsToggle').addEventListener('click', () => {
+      if (reading) { stop(); live('Reader off.'); } else { speak($('#main')); live('Reader on.'); }
+    });
+
+    // Keyboard shortcuts: R to toggle, Shift+R to stop, ? for help
+    window.addEventListener('keydown', (e) => {
+      const tag = (e.target.tagName||'').toLowerCase();
+      const typing = tag === 'input' || tag === 'textarea' || e.isComposing;
+      if (typing) return;
+      if (e.key.toLowerCase() === 'r' && e.shiftKey) { stop(); live('Stopped.'); }
+      else if (e.key.toLowerCase() === 'r') { e.preventDefault(); reading ? stop() : speak($('#main')); }
+      else if (e.key === '?') { e.preventDefault(); $('#help').showModal(); }
+      else if (e.key === 'Escape' && $('#help').open) { $('#help').close(); }
+    });
+
+    // -----------------------------
+    // Nav current link highlighting
+    // -----------------------------
+    const sections = ['home','mission','projects','pipeline','accessibility','contact'].map(id=>({ id, el: document.getElementById(id) }));
+    const navLinks = $$('nav[role="navigation"] a');
+    const navIO = new IntersectionObserver((ents)=>{
+      ents.forEach(ent=>{
+        if(ent.isIntersecting) {
+          navLinks.forEach(a=>a.removeAttribute('aria-current'));
+          const link = $$(`nav a[href="#${ent.target.id}"]`)[0];
+          if (link) link.setAttribute('aria-current','page');
+        }
+      });
+    }, { threshold:.6 });
+    sections.forEach(s=>navIO.observe(s.el));
+  </script>
+
+  <!-- Structured data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Whala",
+    "url": "https://example.com",
+    "logo": "logo.png",
+    "sameAs": [],
+    "slogan": "Accessible AI for everyone",
+    "description": "Whala makes AI accessible to all — especially people with disabilities. Projects include a CNN for eye ailments, neural search, and ViT-guided TTS.",
+    "foundingDate": "2025",
+    "knowsAbout": ["accessibility", "assistive technology", "medical imaging", "text-to-speech", "vision transformer", "neural search"]
+  }
+  </script>
+</body>
+</html>

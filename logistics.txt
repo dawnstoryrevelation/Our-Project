@@ -1,0 +1,7 @@
+Type of model: Convolutional Neural Network
+Parameters: 6-7 million
+Epochs: until convergence
+Dataset: https://huggingface.co/datasets/gOLIVES/OLIVES_Dataset
+Optimizer: AdamW/Sophia-H/Sophia-G/Lion/MuonClip
+Activation: GELU/Swish/BiNLOP-3
+Loss: Cross Entropy
