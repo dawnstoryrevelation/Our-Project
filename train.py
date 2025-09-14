@@ -6,7 +6,8 @@ os.environ.setdefault("XLA_USE_BF16", "1")
 # stuff
 import math
 import time
-import random
+import random 
+
 from dataclasses import dataclass
 # imports.
 import torch
