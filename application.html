@@ -5,7 +5,7 @@
   <title>WhalaApp — Local (WebLLM + ONNX, No API)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="theme-color" content="#0b0b14"/>
-  <meta name="description" content="All-local WhalaApp: on-device LLM (WebLLM) + on-device CNN (ONNX Web). No backend, no keys, free."/>
+  <meta name="description" content="All-local WhalaApp: on-device LLM (WebLLM) + on-device CNN (ONNX Runtime Web). No backend, no keys."/>
   <style>
     :root{
       --bg:#0b0b14;--panel:#0f1120;--text:#f7f7fb;--muted:#b9b9c9;--brand:#7ad8ff;--violet:#b07cff;--accent:#64ffa1;--danger:#ff5a84;--focus:#ffe084;
@@ -132,12 +132,12 @@
     <!-- CHAT PANEL -->
     <div class="panel">
       <h2>WhalaBot (Local WebLLM)</h2>
-      <p class="muted">Runs 100% on your device. No internet calls. Auto-TTS speaks all responses when 🔊 is enabled.</p>
+      <p class="muted">Runs 100% on your device. No internet calls. Auto-TTS speaks all responses when 🔊 is on.</p>
       <div class="chat">
         <div id="log" class="log" role="log" aria-live="polite" aria-relevant="additions"></div>
         <div class="foot">
           <textarea id="input" placeholder="Ask anything… e.g., “What should I do next?”"></textarea>
-          <button id="send" class="btn">Send</button>
+          <button id="send" class="btn" disabled>Loading model…</button>
         </div>
         <div class="warn" role="note">This is not medical advice. Emergencies (sudden vision loss, flashes, ‘curtain’) → seek urgent care.</div>
       </div>
@@ -165,20 +165,30 @@
 </main>
 
 <script>
+/* ===========================================================
+   DOMContentLoaded ensures all elements exist before we start.
+   This also prevents "Cannot access 'log' before initialization".
+=========================================================== */
+window.addEventListener('DOMContentLoaded', () => {
 /* =========================
    GLOBAL A11Y + TTS
 ========================= */
 const ttsToggle = document.getElementById('ttsAll');
 let ttsOn = JSON.parse(localStorage.getItem('whala_tts') || 'true');
 const synth = window.speechSynthesis;
+let chosenVoice = null;
+function pickVoice(){
+  const vs = synth.getVoices();
+  chosenVoice = vs.find(v => /English|en-/i.test(v.name)) || vs[0] || null;
+}
+if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = pickVoice; pickVoice();
+
 function speak(text) {
   if (!ttsOn || !text) return;
   try {
-    synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.rate = 1.02; u.pitch = 1.0; u.volume = 1.0;
-    const voice = (synth.getVoices() || []).find(v => /en-|English/i.test(v.name));
-    if (voice) u.voice = voice;
+    if (chosenVoice) u.voice = chosenVoice;
     synth.speak(u);
   } catch {}
 }
@@ -207,7 +217,6 @@ document.getElementById('bigtext').addEventListener('click', (e)=>{
 /* =========================
    CNN INFERENCE (ONNX)
 ========================= */
-const ortReady = Promise.resolve(); // scripts already loaded
 let session = null;
 let probChart = null;
 const cnnStatus = document.getElementById('cnnStatus');
@@ -215,15 +224,21 @@ const canvas = document.getElementById('canvas');
 const ctx2d = canvas.getContext('2d', { willReadFrequently: true });
 
 async function loadModel() {
-  cnnStatus.textContent = 'model: loading…';
-  session = await ort.InferenceSession.create('./b_eye_o_marker_v1.onnx', {
-    executionProviders: ('gpu' in navigator && window._ortLoadedAs==='webgpu') ? ['webgpu','wasm'] : ['wasm'],
-    graphOptimizationLevel: 'all'
-  });
-  cnnStatus.textContent = 'model: ready';
-  speak('Vision model loaded and ready.');
+  try{
+    cnnStatus.textContent = 'model: loading…';
+    session = await ort.InferenceSession.create('./b_eye_o_marker_v1.onnx', {
+      executionProviders: ('gpu' in navigator && window._ortLoadedAs==='webgpu') ? ['webgpu','wasm'] : ['wasm'],
+      graphOptimizationLevel: 'all'
+    });
+    cnnStatus.textContent = 'model: ready';
+    speak('Vision model loaded and ready.');
+  }catch(e){
+    cnnStatus.textContent = 'model: error';
+    console.error(e);
+    speak('Vision model failed to load.');
+  }
 }
-loadModel().catch(e => { cnnStatus.textContent = 'model: error'; console.error(e); });
+loadModel();
 
 function drawToCanvasFromImage(img){
   const size = 224; canvas.width=size; canvas.height=size;
@@ -249,6 +264,7 @@ file.addEventListener('change', (e)=>{
   const img = new Image(); img.onload = ()=>{ drawToCanvasFromImage(img); setAnalyzeEnabled(true); };
   img.src = URL.createObjectURL(f);
 });
+
 const video = document.getElementById('video');
 const camBtn = document.getElementById('cam');
 const snapBtn = document.getElementById('snap');
@@ -267,6 +283,7 @@ snapBtn.addEventListener('click', ()=>{
   video.classList.add('sr-only');
   setAnalyzeEnabled(true);
 });
+
 const analyzeBtn = document.getElementById('analyze');
 function setAnalyzeEnabled(v){ analyzeBtn.disabled = !v; }
 let lastCnn = null;
@@ -320,6 +337,7 @@ document.getElementById('applyManual').addEventListener('click', ()=>{
   updateUI(lastCnn);
   speak(`Manual condition set to ${v}.`);
 });
+document.getElementById('analyze').disabled = true;
 
 /* =========================
    MCTS (client-side)
@@ -342,35 +360,7 @@ function bestChildByUCT(n){let b=null,uBest=-Infinity;for(const c of n.children)
 function runMCTS({condition,severity,prefs},iters=220){const root=new MCTSNode({condition,severity,prefs,plan:[]});for(let i=0;i<iters;i++){let node=root;while(node.children.length>0) node=bestChildByUCT(node);node=expand(node)||node;const v=simulate(node.state);backprop(node,v)}let best=null,score=-Infinity;for(const c of root.children){const s=c.value/Math.max(1,c.visits);if(s>score){score=s;best=c}}return (best?.state.plan||[]).map(a=>a.text)}
 
 /* =========================
-   WebLLM (local LLM)
-========================= */
-let webllmReady = false;
-let webllmEngine = null;
-// Choose a small on-device model (downloads from public CDN).
-// You can swap to another supported MLC model later.
-const WEBLLM_MODEL = "Qwen2.5-1.5B-Instruct-q4f16_1-MLC";
-
-async function initWebLLM(){
-  try {
-    const { CreateMLCEngine } = window.webllm;
-    webllmEngine = await CreateMLCEngine(WEBLLM_MODEL, {
-      gpuMemoryUsage: 0.9,
-      appConfig: { temperature: 0.3, top_p: 0.9 },
-      logLevel: "warn"
-    });
-    webllmReady = true;
-    console.log("WebLLM ready:", WEBLLM_MODEL);
-    speak("Local chatbot is ready.");
-    addMsg('bot', 'Local chatbot loaded. Ask anything, or press Analyze after selecting an image.');
-  } catch (e) {
-    console.warn("WebLLM init failed", e);
-    addMsg('bot', 'Local model failed to load. Check console for details.');
-  }
-}
-initWebLLM();
-
-/* =========================
-   CHAT UI (no backend, pure local)
+   CHAT UI (pure local)
 ========================= */
 const log = document.getElementById('log');
 const input = document.getElementById('input');
@@ -403,12 +393,9 @@ async function chatSend(){
     return;
   }
 
-  // Build MCTS plan locally
   const condition = (manualSel.value || lastCnn?.label || 'unknown').toLowerCase();
   const severity  = lastCnn?.severity || 'moderate';
   const plan      = runMCTS({ condition, severity, prefs:{ tts: ttsOn } }, 260);
-
-  // Strong safety+accessibility system message
   const system = [
     "Role: Assistive health & accessibility guide. You are not a doctor; do NOT provide medical diagnoses.",
     "Always recommend professional care; escalate emergencies (sudden vision loss, flashes, curtain).",
@@ -423,7 +410,6 @@ async function chatSend(){
     mcts_candidate_plan: plan
   };
 
-  // Prefer OpenAI-like API if present; else fallback to a generic generate call
   let text = '';
   try {
     if (webllmEngine?.chat?.completions?.create) {
@@ -439,7 +425,6 @@ async function chatSend(){
       });
       text = out.choices?.[0]?.message?.content || '';
     } else if (webllmEngine?.generate) {
-      // Older API fallback
       const prompt = [
         system,
         "\n---\nContext JSON:\n", JSON.stringify(ctx, null, 2),
@@ -465,13 +450,61 @@ async function chatSend(){
 send.addEventListener('click', chatSend);
 input.addEventListener('keydown', (e)=>{ if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); chatSend(); }});
 
-// Initial narration
-speak('Local Whala application loaded. Use upload or camera, then press Analyze. Chat is fully local.');
-
-/* Small a11y: focus log region on new messages */
+// Initial narration & tiny a11y nicety
+addMsg('bot', 'Local Whala application loaded. Use upload or camera, then press Analyze. Chat is fully local.');
 const observer = new MutationObserver(()=> log.setAttribute('tabindex','-1'));
 observer.observe(log, { childList:true });
 
+/* =========================
+   WebLLM (local LLM) — load AFTER UI is ready
+========================= */
+let webllmReady = false;
+let webllmEngine = null;
+const WEBLLM_MODEL = "Qwen2.5-1.5B-Instruct-q4f16_1-MLC";
+
+async function initWebLLM(){
+  try {
+    const { CreateMLCEngine } = window.webllm;
+    send.disabled = true; send.textContent = 'Loading model…';
+
+    webllmEngine = await CreateMLCEngine(WEBLLM_MODEL, {
+      gpuMemoryUsage: 0.9,
+      appConfig: { temperature: 0.3, top_p: 0.9 },
+      logLevel: "warn",
+      initProgressCallback: (p) => {
+        if (p && typeof p.progress === 'number') {
+          const pct = Math.round(p.progress*100);
+          send.textContent = `Loading model… ${pct}%`;
+          // reuse the status pill to show LLM progress too
+          cnnStatus.textContent = `LLM: ${pct}%`;
+        }
+      }
+    });
+
+    webllmReady = true;
+    send.disabled = false; send.textContent = 'Send';
+    cnnStatus.textContent = 'LLM: ready';
+    addMsg('bot', 'Local chatbot ready. Ask anything, or Analyze an image first for context.');
+    speak('Local chatbot is ready.');
+  } catch (e) {
+    console.warn("WebLLM init failed", e);
+    addMsg('bot', 'Local model failed to load. Try refreshing the page.');
+  }
+}
+initWebLLM();
+
+/* Enable Analyze only after an image or capture exists */
+function hasPixels(){
+  const d = ctx2d.getImageData(0,0,224,224).data;
+  for (let i=0;i<64;i++){ if (d[i]!==0) return true; } // quick peek
+  return false;
+}
+canvas.addEventListener('update', ()=> setAnalyzeEnabled(hasPixels()));
+// Also enable after file/cam interactions
+document.getElementById('stage').addEventListener('click', ()=> setAnalyzeEnabled(hasPixels()));
+document.getElementById('file').addEventListener('input', ()=> setAnalyzeEnabled(hasPixels()));
+
+}); // end DOMContentLoaded
 </script>
 </body>
 </html>
