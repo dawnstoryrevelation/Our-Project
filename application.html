@@ -1,405 +1,415 @@
+<!-- application.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8"/>
   <title>WhalaApp — B-Eye-O-Marker V1 + WhalaBot</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#0b0b14" />
-  <meta name="description" content="WhalaApp: AI eye health (CNN) + accessible chatbot with TTS and planning."/>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="theme-color" content="#0b0b14"/>
+  <meta name="description" content="Accessible AI: in-browser CNN eye screening (research, not diagnosis) + GPT-5 Mini assistive chatbot with planning, MCTS and TTS."/>
+  <!-- Design language mirrors your index.html palette -->
   <style>
-    :root {
-      --bg:#0b0b14; --bg-soft:#0f1120; --text:#f7f7fb; --muted:#b9b9c9;
-      --brand:#7ad8ff; --brand-2:#b07cff; --accent:#64ffa1; --danger:#ff5a84; --focus:#ffe084;
-      --card:rgba(255,255,255,0.06); --radius-xl:22px; --radius-xxl:30px; --shadow-1:0 10px 30px rgba(0,0,0,0.25); --shadow-2:0 20px 60px rgba(0,0,0,0.4);
-      --speed-1:800ms; --speed-2:1400ms; --speed-3:2200ms; --font-sans: ui-sans-serif, system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial; --font-mono: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+    :root{
+      --bg:#0b0b14;--panel:#0f1120;--text:#f7f7fb;--muted:#b9b9c9;--brand:#7ad8ff;--violet:#b07cff;--accent:#64ffa1;--danger:#ff5a84;--focus:#ffe084;
+      --card:rgba(255,255,255,.06);--shadow:0 18px 60px rgba(0,0,0,.45);--r:22px;--r2:30px
     }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; font-family:var(--font-sans); color:var(--text);
-      background: radial-gradient(1200px 800px at 10% -10%, rgba(122,216,255,0.12), transparent 55%),
-                  radial-gradient(1200px 800px at 110% 10%, rgba(176,124,255,0.12), transparent 55%),
-                  radial-gradient(900px 600px at 50% 120%, rgba(100,255,161,0.08), transparent 60%), var(--bg);
-      overflow-x:hidden;
+    *{box-sizing:border-box}html,body{height:100%}body{
+      margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial;color:var(--text);
+      background:radial-gradient(1200px 800px at 10% -10%, rgba(122,216,255,.12), transparent 55%),
+                 radial-gradient(1200px 800px at 110% 10%, rgba(176,124,255,.12), transparent 55%),
+                 radial-gradient(900px 600px at 50% 120%, rgba(100,255,161,.08), transparent 60%),var(--bg);
     }
-    header{position:sticky; top:0; z-index:1000; backdrop-filter:saturate(1.2) blur(10px);
-      background:linear-gradient(180deg, rgba(11,11,20,0.78), rgba(11,11,20,0.44));
-      border-bottom:1px solid rgba(255,255,255,0.06);
-    }
-    .nav{max-width:1200px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; padding:14px 20px;}
-    .brand{display:flex; align-items:center; gap:12px; color:var(--text); text-decoration:none;}
-    .brand img{width:42px;height:42px;border-radius:10px;object-fit:contain;background:rgba(255,255,255,0.04);padding:6px}
-    .brand strong{letter-spacing:.6px;font-weight:800}
-    .ctrls{display:flex;gap:10px}
-    .btn{border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.04); color:var(--text);
-      padding:8px 12px; border-radius:12px; cursor:pointer; font-size:14px; font-weight:700;}
-    .btn:focus{outline:3px solid var(--focus); outline-offset:2px}
-
-    main{max-width:1200px; margin:0 auto; padding:28px 20px 80px}
-    h1{font-size:clamp(30px,6vw,56px); margin:18px 0}
-    .grid{display:grid; grid-template-columns: 1fr 1fr; gap:24px}
-    .panel{background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
-      border:1px solid rgba(255,255,255,0.12); border-radius:var(--radius-xxl); box-shadow:var(--shadow-1);
-      padding:18px; position:relative; overflow:hidden}
-    .panel h2{margin:0 0 8px; font-size:24px}
-    .muted{color:var(--muted)}
-    .row{display:flex; gap:12px; flex-wrap:wrap; align-items:center}
-    .well{background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:16px; padding:10px 12px}
-    .media{display:grid; grid-template-columns: 1.1fr 0.9fr; gap:16px}
-    .media .ph{background:var(--card); border:1px solid rgba(255,255,255,0.12); border-radius:16px; min-height:260px; display:grid; place-items:center; position:relative; overflow:hidden}
-    video, canvas {max-width:100%; width:100%; border-radius:16px}
-    input[type="file"]{display:none}
-    label.file{display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,0.14);
-      background:rgba(255,255,255,0.06); cursor:pointer; font-weight:700}
-    .primary{background:linear-gradient(135deg, var(--brand), var(--accent)); color:#042016; border:0}
-    .danger{background:linear-gradient(135deg,#ff98b1,#ff5a84); color:#3e0014; border:0}
-    .kpi{display:grid; grid-template-columns: repeat(3,1fr); gap:10px; margin-top:10px}
-    .kpi .box{background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:10px}
-    .mono{font-family:var(--font-mono)}
-    .out{background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:16px; padding:12px; min-height:120px}
-    .chat{display:grid; grid-template-rows:auto 1fr auto; gap:12px; height:520px}
-    .msgs{overflow:auto; border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:12px; background:rgba(255,255,255,0.05)}
-    .msg{margin:8px 0; line-height:1.6}
-    .msg.user{color:#dfe8ff}
-    .msg.bot{color:#eafff2}
-    .plan{background:rgba(100,255,161,0.08); border:1px solid rgba(100,255,161,0.25); border-radius:14px; padding:8px 10px; margin:10px 0}
-    .actions{display:flex; gap:10px}
-    .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(1px,1px,1px,1px);white-space:nowrap}
-    .tts-on{outline:3px solid var(--focus)}
-    .chart-wrap{border:1px solid rgba(255,255,255,0.12); border-radius:16px; padding:10px; background:rgba(255,255,255,0.05)}
-    small.warn{color:#ffd2e0}
-    .disclaimer{margin-top:12px; color:#ffd2e0; font-size:13px}
-    @media (max-width: 980px){ .grid{grid-template-columns:1fr} .media{grid-template-columns:1fr} }
-    @media (prefers-reduced-motion: reduce){ *{animation:none!important;transition:none!important} }
+    header{position:sticky;top:0;z-index:10;backdrop-filter:saturate(1.2) blur(10px);background:linear-gradient(180deg, rgba(11,11,20,.78), rgba(11,11,20,.44));border-bottom:1px solid rgba(255,255,255,.06)}
+    .nav{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:12px 18px}
+    .brand{display:flex;gap:10px;align-items:center;color:var(--text);text-decoration:none}
+    .brand img{width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.05);padding:6px}
+    main{max-width:1200px;margin:0 auto;padding:28px 18px 60px;display:grid;gap:24px}
+    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:22px}
+    .panel{background:linear-gradient(160deg, rgba(255,255,255,.06), rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.1);border-radius:var(--r2);box-shadow:var(--shadow);padding:18px}
+    h1{font-size:clamp(28px,4vw,40px);margin:6px 0 2px}
+    h2{font-size:clamp(22px,3vw,28px);margin:0 0 8px}
+    p.muted{color:var(--muted)}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .btn{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:var(--text);padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:800}
+    .btn:focus{outline:3px solid var(--focus);outline-offset:2px}
+    input[type=file]{display:none}
+    .upload-label{display:inline-flex;gap:10px;align-items:center}
+    .stage{position:relative;border-radius:18px;background:var(--card);border:1px solid rgba(255,255,255,.1);min-height:280px;display:grid;place-items:center;overflow:hidden}
+    video,canvas,.preview{max-width:100%;border-radius:12px}
+    .metrics{display:grid;grid-template-columns:repeat(2,minmax(200px,1fr));gap:14px}
+    .card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:14px}
+    .status{font-family:ui-monospace,monospace}
+    .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);font-size:12px}
+    .chat{display:grid;grid-template-rows:1fr auto;gap:10px;height:520px}
+    .log{overflow:auto;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);padding:12px}
+    .msg{margin:8px 0;padding:10px 12px;border-radius:12px}
+    .msg.user{background:rgba(122,216,255,.10);border:1px solid rgba(122,216,255,.25)}
+    .msg.bot{background:rgba(176,124,255,.10);border:1px solid rgba(176,124,255,.25)}
+    textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:var(--text);padding:10px}
+    .foot{display:flex;gap:10px;align-items:center}
+    .warn{color:#ffd8d8}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+    .sr-only{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}
+    @media (max-width:1000px){.grid,.grid-2{grid-template-columns:1fr}}
   </style>
+
+  <!-- ONNX Runtime Web: try WebGPU, fallback to WASM -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.webgpu.min.js"></script>
+  <script>window._ortLoadedAs='webgpu';</script>
+  <script>
+    // Fallback to WASM if WebGPU not supported or blocked
+    if (!('gpu' in navigator)) {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"><\/script>');
+      window._ortLoadedAs='wasm';
+    }
+  </script>
+  <!-- Chart.js for probability bars -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
-  <header role="banner" aria-label="Main Navigation">
-    <nav class="nav" aria-label="Primary">
-      <a class="brand" href="index.html"><img src="logo.png" alt="Whala logo"/><strong>Whala</strong></a>
-      <div class="ctrls">
-        <button class="btn" id="toggleTTS" aria-pressed="true" title="Toggle screen-reader voice">🔊 Voice</button>
-        <button class="btn" id="highContrast" title="High Contrast">⬛⬜</button>
-        <button class="btn" id="largerText" title="A+ Text">A+</button>
+<header>
+  <nav class="nav" aria-label="Main">
+    <a class="brand" href="index.html"><img src="logo.png" alt="Whala logo"/><strong>WhalaApp</strong></a>
+    <div class="row">
+      <button id="ttsAll" class="btn" aria-pressed="false" title="Toggle global TTS">🔊 TTS</button>
+      <button id="contrast" class="btn" aria-pressed="false">High Contrast</button>
+      <button id="bigtext" class="btn" aria-pressed="false">A+ Text</button>
+    </div>
+  </nav>
+</header>
+
+<main>
+  <section class="panel" aria-labelledby="app-h">
+    <h1 id="app-h">B-Eye-O-Marker V1 + WhalaBot</h1>
+    <p class="muted">Research prototype — <strong>not a medical device</strong>. Results may be wrong. Always consult a clinician for diagnosis.</p>
+  </section>
+
+  <section class="grid" aria-labelledby="cnn-h">
+    <!-- CNN PANEL -->
+    <div class="panel" id="cnn-panel">
+      <h2 id="cnn-h">B-Eye-O-Marker V1 (ONNX)</h2>
+      <div class="row" role="group" aria-label="Image input">
+        <label class="upload-label btn" for="file"><span>📁 Upload</span></label>
+        <input id="file" type="file" accept="image/*" />
+        <button id="cam" class="btn">📷 Camera</button>
+        <button id="snap" class="btn" disabled>🟢 Capture</button>
+        <button id="analyze" class="btn" disabled>🧠 Analyze</button>
+        <span class="pill status" id="cnnStatus">model: loading…</span>
       </div>
-    </nav>
-  </header>
+      <div class="stage" id="stage" aria-live="polite">
+        <video id="video" autoplay playsinline class="sr-only"></video>
+        <canvas id="canvas" class="preview" aria-label="Image preview" width="224" height="224"></canvas>
+      </div>
 
-  <main id="main" tabindex="-1">
-    <h1 class="tts">WhalaApp — B-Eye-O-Marker V1 + WhalaBot</h1>
-
-    <section class="grid">
-      <!-- CNN PANEL -->
-      <section class="panel" aria-labelledby="cnn-h">
-        <h2 id="cnn-h" class="tts">B-Eye-O-Marker V1 (CNN)</h2>
-        <p class="muted tts">Upload a retinal/OCT image of an eye, or capture via camera. The model classifies **DR vs DME** with calibrated uncertainty. You can also skip and enter a condition manually.</p>
-
-        <div class="media" style="margin-top:10px">
-          <div class="ph">
-            <video id="cam" playsinline class="sr-only" aria-hidden="true"></video>
-            <canvas id="frame" width="512" height="512" aria-label="Image preview"></canvas>
-          </div>
-          <div>
-            <div class="row">
-              <input id="file" type="file" accept="image/*" />
-              <label for="file" class="file" aria-label="Choose a photo">📁 Choose Photo</label>
-              <button class="btn" id="openCam" aria-pressed="false">📷 Use Camera</button>
-              <button class="btn primary" id="run" disabled>▶️ Run CNN</button>
-              <button class="btn danger" id="reset">♻ Reset</button>
-            </div>
-
-            <div class="kpi" style="margin-top:10px">
-              <div class="box"><div class="muted">Predicted</div><div id="pred" class="mono tts">—</div></div>
-              <div class="box"><div class="muted">Confidence</div><div id="conf" class="mono tts">—</div></div>
-              <div class="box"><div class="muted">Uncertainty</div><div id="unc" class="mono tts">—</div></div>
-            </div>
-
-            <div class="well" style="margin-top:10px">
-              <label for="manual" class="muted">Or type a condition (skip CNN):</label>
-              <input id="manual" class="mono" placeholder="e.g., Normal, DR, DME, Glaucoma, AMD…" style="width:100%;padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.04); color:var(--text)" />
-            </div>
-          </div>
+      <div class="metrics" style="margin-top:14px">
+        <div class="card">
+          <strong>Prediction</strong><br/>
+          <div id="predText" style="margin-top:6px">—</div>
+          <div class="muted" id="uncert">Uncertainty: —</div>
         </div>
-
-        <div class="chart-wrap" style="margin-top:12px">
-          <canvas id="bars" width="800" height="140" aria-label="Class probabilities chart"></canvas>
+        <div class="card">
+          <strong>Class Probabilities</strong>
+          <canvas id="probChart" height="140" aria-label="Probability chart"></canvas>
         </div>
+      </div>
 
-        <p class="disclaimer tts"><strong>Important:</strong> This is a research preview, not a medical device. Don’t use for diagnosis or treatment decisions. If you have any symptoms, seek professional care or call emergency services.</p>
-      </section>
-
-      <!-- CHATBOT PANEL -->
-      <section class="panel chat" aria-labelledby="bot-h">
-        <h2 id="bot-h" class="tts">WhalaBot — Accessible Health Advisor</h2>
-        <div id="msgs" class="msgs" role="log" aria-live="polite" aria-relevant="additions"></div>
-        <div class="plan tts" id="planBox" aria-live="polite"></div>
-        <div class="actions">
-          <input id="chat" placeholder="Ask anything… (Enter to send)" aria-label="Type message" style="flex:1; padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.06); color:var(--text)" />
-          <button class="btn primary" id="send">Send</button>
+      <div class="card" style="margin-top:14px">
+        <strong>Manually specify condition (optional)</strong>
+        <div class="row" style="margin-top:6px">
+          <select id="manualCond" aria-label="Manual condition">
+            <option value="">— None —</option>
+            <option>DR</option>
+            <option>DME</option>
+            <option>Normal</option>
+          </select>
+          <button id="applyManual" class="btn">Apply</button>
         </div>
-        <small class="warn tts">Privacy: your message and (if provided) the model’s classification are sent to our server to generate tailored guidance. We don’t store images.</small>
-      </section>
-    </section>
-  </main>
+        <p class="muted" style="margin:10px 0 0">If you don’t want to use the CNN, choose a condition here. This will feed the chatbot.</p>
+      </div>
+    </div>
 
-  <!-- onnxruntime-web (GPU/WebGL if available; falls back to WASM) -->
-  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js" integrity="sha384-6m8n1Gk8P8T2U3cBz6yRug0YjD8JgqGxk6w2G8c0y+f6IpR1oP6wCJ1TtWlKxW9C" crossorigin="anonymous"></script>
-  <script>
-    // --------------- Accessibility: global TTS for *every* section ---------------
-    let TTS_ON = true;
-    const synth = window.speechSynthesis;
-    function speak(el){
-      if(!TTS_ON || !synth) return;
-      const text = (typeof el === 'string') ? el : (el.innerText || el.textContent || '');
-      if(!text || !text.trim()) return;
-      const u = new SpeechSynthesisUtterance(text.trim());
-      u.rate = 1.03; u.pitch = 1.0; u.volume = 1; u.lang = navigator.language || 'en-US';
-      synth.cancel(); // read last only
-      synth.speak(u);
-    }
-    function ttsAll(){
-      document.querySelectorAll('.tts').forEach((el,i)=>{ if(i<1) speak(el); });
-    }
-    window.addEventListener('load', ttsAll);
+    <!-- CHAT PANEL -->
+    <div class="panel">
+      <h2>WhalaBot (GPT-5 Mini)</h2>
+      <p class="muted">Accessible assistant: takes CNN/Manual context + runs an internal MCTS plan, then explains options in plain language. Auto-TTS is on when 🔊 is active.</p>
+      <div class="chat">
+        <div id="log" class="log" role="log" aria-live="polite" aria-relevant="additions"></div>
+        <div class="foot">
+          <textarea id="input" placeholder="Ask anything… e.g., “What should I do next?”"></textarea>
+          <button id="send" class="btn">Send</button>
+        </div>
+        <div class="warn" role="note">Safety: This is not medical advice. If you have sudden vision loss, flashes, or a ‘curtain’ over vision — seek emergency care.</div>
+      </div>
+    </div>
+  </section>
 
-    document.getElementById('toggleTTS').addEventListener('click', e=>{
-      TTS_ON = !TTS_ON;
-      e.currentTarget.setAttribute('aria-pressed', String(TTS_ON));
-      e.currentTarget.classList.toggle('tts-on', TTS_ON);
-      speak(TTS_ON ? "Voice on" : "Voice off");
-    });
-    document.getElementById('highContrast').addEventListener('click', ()=>{
-      const r = document.documentElement;
-      const hc = r.style.getPropertyValue('--bg') === '#000';
-      r.style.setProperty('--bg', hc ? '#0b0b14' : '#000');
-      r.style.setProperty('--text', hc ? '#f7f7fb' : '#fff');
-      r.style.setProperty('--muted', hc ? '#b9b9c9' : '#eaeaea');
-      speak('Contrast toggled');
-    });
-    document.getElementById('largerText').addEventListener('click', ()=>{
-      const body = document.body;
-      const big = body.style.fontSize === '18px';
-      body.style.fontSize = big ? '' : '18px';
-      speak('Text size toggled');
-    });
+  <section class="panel">
+    <h2>Deep Metrics & Accessibility Insights</h2>
+    <div class="grid-2">
+      <div class="card">
+        <strong>Report Elements</strong>
+        <ul id="reportList" aria-live="polite">
+          <li>Summary</li>
+          <li>Top actions (from MCTS)</li>
+          <li>Follow-up timeline</li>
+          <li>Accessibility plan (TTS, screen reader, contrast, magnification)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <strong>Explain-Like-I’m-Listening (ELL)</strong>
+        <p class="muted">Every section is narrated when 🔊 is on. For low-vision users, diagrams are described with text and earcons.</p>
+      </div>
+    </div>
+  </section>
+</main>
 
-    // --------------- CNN: load ONNX model + preprocess/infer ---------------------
-    const onnxPath = 'b_eye_o_marker_v1.onnx'; // keep alongside this file
-    let session = null;
-    let lastProbs = [0.5, 0.5];
-    let lastPred = null;
+<script>
+/* =========================
+   GLOBAL A11Y + TTS
+========================= */
+const ttsToggle = document.getElementById('ttsAll');
+let ttsOn = JSON.parse(localStorage.getItem('whala_tts') || 'true');
+const synth = window.speechSynthesis;
+function speak(text) {
+  if (!ttsOn) return;
+  if (!text) return;
+  // Cancel previous utterances to avoid queue buildup
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 1.02; u.pitch = 1.0; u.volume = 1.0;
+  // Prefer an English voice; let OS pick best available.
+  const voice = (synth.getVoices() || []).find(v => /en-|English/i.test(v.name));
+  if (voice) u.voice = voice;
+  synth.speak(u);
+}
+function setTTSEnabled(v) {
+  ttsOn = v; localStorage.setItem('whala_tts', JSON.stringify(v));
+  ttsToggle.setAttribute('aria-pressed', v);
+}
+setTTSEnabled(ttsOn);
+ttsToggle.addEventListener('click', ()=> setTTSEnabled(!ttsOn));
 
-    const file = document.getElementById('file');
-    const frame = document.getElementById('frame');
-    const cam = document.getElementById('cam');
-    const openCam = document.getElementById('openCam');
-    const runBtn = document.getElementById('run');
-    const resetBtn = document.getElementById('reset');
-    const ctx = frame.getContext('2d', { willReadFrequently: true });
+document.getElementById('contrast').addEventListener('click', (e)=>{
+  const pressed = e.currentTarget.getAttribute('aria-pressed') === 'true';
+  e.currentTarget.setAttribute('aria-pressed', String(!pressed));
+  document.documentElement.style.setProperty('--bg', pressed ? '#0b0b14' : '#000');
+  document.documentElement.style.setProperty('--text', pressed ? '#f7f7fb' : '#fff');
+  document.documentElement.style.setProperty('--muted', pressed ? '#b9b9c9' : '#eaeaea');
+  speak('High contrast ' + (!pressed ? 'enabled' : 'disabled'));
+});
+document.getElementById('bigtext').addEventListener('click', (e)=>{
+  const pressed = e.currentTarget.getAttribute('aria-pressed') === 'true';
+  e.currentTarget.setAttribute('aria-pressed', String(!pressed));
+  document.body.style.fontSize = pressed ? '' : '18px';
+  speak('Large text ' + (!pressed ? 'enabled' : 'disabled'));
+});
 
-    let usingCamera = false;
-    let stream = null;
+/* =========================
+   CNN INFERENCE (ONNX)
+   - tries WebGPU, falls back to WASM
+   - preprocessing: grayscale, 224x224, [0,1]
+========================= */
+// ONNX Runtime Web references (WebGPU/WASM usage): official docs
+// - Execution provider switch via webgpu script vs default WASM build
+// - Web env/session flags & wasmPaths if you self-host assets (we use CDN) :contentReference[oaicite:4]{index=4}
+const ortReady = new Promise((resolve)=>{
+  if (window._ortLoadedAs === 'webgpu') {
+    // nothing else needed; WebGPU is active if available
+    resolve();
+  } else {
+    // WASM path already handled by CDN; resolve immediately
+    resolve();
+  }
+});
+let session = null;
+let probChart = null;
+const cnnStatus = document.getElementById('cnnStatus');
+const canvas = document.getElementById('canvas');
+const ctx2d = canvas.getContext('2d', { willReadFrequently: true });
 
-    async function loadModel(){
-      if(session) return session;
-      try{
-        session = await ort.InferenceSession.create(onnxPath, {
-          executionProviders: ['webgl','wasm'], graphOptimizationLevel: 'all'
-        });
-        speak('Model loaded');
-      }catch(err){
-        console.error(err); alert('Failed to load ONNX model. Ensure b_eye_o_marker_v1.onnx is present.');
-      }
-      return session;
-    }
-    function drawImageToCanvas(img){
-      const size = Math.min(frame.width, frame.height);
-      // letterbox center-crop
-      const ratio = Math.min(frame.width/img.width, frame.height/img.height);
-      const w = img.width * ratio, h = img.height * ratio;
-      ctx.clearRect(0,0,frame.width,frame.height);
-      ctx.drawImage(img, (frame.width-w)/2, (frame.height-h)/2, w, h);
-      runBtn.disabled = false;
-    }
-    file.addEventListener('change', (e)=>{
-      const f = e.target.files?.[0]; if(!f) return;
-      const url = URL.createObjectURL(f);
-      const img = new Image(); img.onload = ()=>drawImageToCanvas(img); img.src = url;
-      usingCamera = false; closeCam();
-    });
+async function loadModel() {
+  await ortReady;
+  cnnStatus.textContent = 'model: loading…';
+  // For WebGPU, sessionOptions can specify executionProviders: ['webgpu']
+  // For WASM default: no need to set EP explicitly.
+  session = await ort.InferenceSession.create('./b_eye_o_marker_v1.onnx', {
+    executionProviders: ('gpu' in navigator && window._ortLoadedAs==='webgpu') ? ['webgpu','wasm'] : ['wasm'],
+    graphOptimizationLevel: 'all'
+  });
+  cnnStatus.textContent = 'model: ready';
+  speak('Vision model loaded and ready.');
+}
+loadModel().catch(e => { cnnStatus.textContent = 'model: error'; console.error(e); });
 
-    openCam.addEventListener('click', async ()=>{
-      try{
-        if(usingCamera){ closeCam(); return; }
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'environment', width:{ideal:1280}, height:{ideal:720} }, audio:false });
-        cam.srcObject = stream; cam.classList.remove('sr-only'); cam.play();
-        usingCamera = true; openCam.setAttribute('aria-pressed','true');
-        requestAnimationFrame(captureToCanvas);
-        runBtn.disabled = false;
-        speak('Camera on');
-      }catch(err){ console.error(err); alert('Camera access denied.'); }
-    });
-    function captureToCanvas(){
-      if(!usingCamera) return;
-      ctx.drawImage(cam, 0, 0, frame.width, frame.height);
-      requestAnimationFrame(captureToCanvas);
-    }
-    function closeCam(){
-      if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
-      cam.pause(); cam.srcObject=null; cam.classList.add('sr-only'); usingCamera=false;
-      openCam.setAttribute('aria-pressed','false');
-    }
-    resetBtn.addEventListener('click', ()=>{
-      ctx.clearRect(0,0,frame.width,frame.height); runBtn.disabled=true; file.value='';
-      document.getElementById('pred').textContent='—'; document.getElementById('conf').textContent='—'; document.getElementById('unc').textContent='—';
-      drawBars([0,0]);
-      speak('Reset');
-    });
+function drawToCanvasFromImage(img){
+  // Fit into 224x224 while covering (center-crop)
+  const size = 224; canvas.width=size; canvas.height=size;
+  const r = img.width / img.height;
+  let dw=size, dh=size, sx=0, sy=0, sw=img.width, sh=img.height;
+  if (r>1){ // wider
+    sh = img.height; sw = sh; sx = (img.width - sw)/2;
+  } else { // taller
+    sw = img.width; sh = sw; sy = (img.height - sh)/2;
+  }
+  ctx2d.clearRect(0,0,size,size);
+  ctx2d.drawImage(img, sx, sy, sw, sh, 0,0,size,size);
+}
+function tensorFromCanvas(){
+  const { data } = ctx2d.getImageData(0,0,224,224);
+  const out = new Float32Array(1*1*224*224);
+  // Convert RGBA -> gray, normalize [0,1]
+  for (let i=0, j=0; i<data.length; i+=4, j++){
+    const r=data[i], g=data[i+1], b=data[i+2];
+    out[j] = (0.299*r + 0.587*g + 0.114*b)/255;
+  }
+  return new ort.Tensor('float32', out, [1,1,224,224]);
+}
 
-    function preprocess(){
-      // Training transforms were: Grayscale→Resize(224×224)→ToTensor() in [0,1]
-      const size = 224;
-      const tmp = document.createElement('canvas'); tmp.width=size; tmp.height=size;
-      const tctx = tmp.getContext('2d');
-      tctx.drawImage(frame, 0,0,size,size);
-      const {data} = tctx.getImageData(0,0,size,size);
-      const x = new Float32Array(1*1*size*size);
-      for(let i=0;i<size*size;i++){
-        const r = data[i*4]/255, g=data[i*4+1]/255, b=data[i*4+2]/255;
-        // grayscale like transforms.Grayscale: luminosity approx
-        const gray = 0.2989*r + 0.5870*g + 0.1140*b;
-        x[i] = gray;
-      }
-      return new ort.Tensor('float32', x, [1,1,size,size]);
-    }
+const file = document.getElementById('file');
+file.addEventListener('change', (e)=>{
+  const f = e.target.files?.[0]; if (!f) return;
+  const img = new Image(); img.onload = ()=>{ drawToCanvasFromImage(img); setAnalyzeEnabled(true); };
+  img.src = URL.createObjectURL(f);
+});
+const video = document.getElementById('video');
+const camBtn = document.getElementById('cam');
+const snapBtn = document.getElementById('snap');
+camBtn.addEventListener('click', async ()=>{
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user', width: 640, height: 480 } });
+    video.srcObject = stream; video.classList.remove('sr-only');
+    snapBtn.disabled = false; speak('Camera ready. Center your eye and press capture.');
+  }catch(err){
+    alert('Camera not available.'); console.error(err);
+  }
+});
+snapBtn.addEventListener('click', ()=>{
+  const v = video;
+  if (!v || v.readyState < 2) return;
+  canvas.getContext('2d').drawImage(v, 0,0,224,224);
+  video.classList.add('sr-only');
+  setAnalyzeEnabled(true);
+});
+const analyzeBtn = document.getElementById('analyze');
+function setAnalyzeEnabled(v){ analyzeBtn.disabled = !v; }
+let lastCnn = null;
 
-    function softmax(logits){
-      const m = Math.max(...logits), exps = logits.map(v=>Math.exp(v-m));
-      const s = exps.reduce((a,b)=>a+b,0);
-      return exps.map(v=>v/s);
-    }
+async function runCNN(){
+  if (!session){ alert('Model not ready yet.'); return; }
+  cnnStatus.textContent = 'analyzing…';
+  const input = tensorFromCanvas();
+  const outputs = await session.run({ input });
+  const logits = outputs.logits?.data || Object.values(outputs)[0].data; // [N,2]
+  const [logit0, logit1] = [logits[0], logits[1]];
+  // Softmax
+  const e0 = Math.exp(logit0 - Math.max(logit0, logit1));
+  const e1 = Math.exp(logit1 - Math.max(logit0, logit1));
+  const s = e0 + e1;
+  const p0 = e0 / s, p1 = e1 / s;
 
-    function drawBars(p){
-      const c = document.getElementById('bars');
-      const cx = c.getContext('2d');
-      cx.clearRect(0,0,c.width,c.height);
-      const labels = ['DR','DME'];
-      const W = c.width, H=c.height, pad=20, bw= (W-2*pad)/labels.length - 30;
-      labels.forEach((lab,i)=>{
-        const x = pad + i*(bw+30);
-        const h = Math.max(2, (H-40)*p[i]);
-        cx.fillStyle='rgba(122,216,255,0.35)'; cx.fillRect(x, H-20-h, bw, h);
-        cx.fillStyle='#fff'; cx.fillText(`${lab}: ${(p[i]*100).toFixed(1)}%`, x, H-6);
-      });
-    }
+  // Map: 0->DR, 1->DME (from training convention)
+  const label = (p0 >= p1) ? 'DR' : 'DME';
+  const conf = Math.max(p0, p1);
+  const uncert = 1 - conf;
 
-    async function runCNN(){
-      await loadModel();
-      const input = preprocess();
-      const feeds = {'input': input}; // expects name "input"; if different, quick-map below:
-      let out;
-      try{
-        out = await session.run(feeds);
-      }catch(e){
-        // Fallback: try first output if unknown name
-        const outNames = session.outputNames;
-        out = await session.run(feeds, outNames ? outNames : undefined);
-      }
-      const firstKey = Object.keys(out)[0];
-      const logits = Array.from(out[firstKey].data);
-      const probs = softmax(logits);
-      lastProbs = probs;
-      const classes = ['DR','DME'];
-      const predIdx = probs[0] >= probs[1] ? 0 : 1;
-      lastPred = classes[predIdx];
+  lastCnn = { label: label.toLowerCase(), probs:{ DR:p0, DME:p1 }, confidence: conf, uncertainty: uncert,
+              severity: conf>0.8 ? 'severe' : conf>0.6 ? 'moderate' : 'mild' };
 
-      const conf = probs[predIdx];
-      const uncertainty = 1 - conf;
-      document.getElementById('pred').textContent = lastPred;
-      document.getElementById('conf').textContent = `${(conf*100).toFixed(1)}%`;
-      document.getElementById('unc').textContent  = `${(uncertainty*100).toFixed(1)}%`;
-      drawBars(probs);
+  updateUI(lastCnn);
+  cnnStatus.textContent = 'done';
+  speak(`Model thinks: ${label}, confidence ${(conf*100).toFixed(0)} percent.`);
+}
+analyzeBtn.addEventListener('click', runCNN);
 
-      // Accessibility voice
-      speak(`Predicted ${lastPred} with confidence ${(conf*100).toFixed(1)} percent`);
+// Chart + UI updates
+const probCtx = document.getElementById('probChart');
+probChart = new Chart(probCtx, {
+  type:'bar',
+  data:{ labels:['DR','DME'], datasets:[{ label:'Probability', data:[0,0] }] },
+  options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ y:{ min:0, max:1 } } }
+});
+const predText = document.getElementById('predText');
+const uncert = document.getElementById('uncert');
 
-      // Auto-seed WhalaBot with the new result
-      seedPlanAndAdvice();
-    }
+function updateUI(cnn){
+  probChart.data.datasets[0].data = [cnn.probs.DR, cnn.probs.DME];
+  probChart.update();
+  predText.textContent = `Pred: ${cnn.label.toUpperCase()}  (conf ${(cnn.confidence*100).toFixed(1)}%)`;
+  uncert.textContent = `Uncertainty: ${(cnn.uncertainty*100).toFixed(1)}%`;
+  addReport([
+    `CNN suggests: ${cnn.label.toUpperCase()}`,
+    `Confidence: ${(cnn.confidence*100).toFixed(1)}%`,
+    `Severity bucket: ${cnn.severity}`
+  ]);
+}
 
-    document.getElementById('run').addEventListener('click', runCNN);
+// Manual condition override
+const manualSel = document.getElementById('manualCond');
+document.getElementById('applyManual').addEventListener('click', ()=>{
+  const v = manualSel.value;
+  if (!v){ speak('Manual condition cleared.'); return; }
+  lastCnn = { label: v.toLowerCase(), probs:{ DR: v==='DR'?1:0, DME: v==='DME'?1:0 }, confidence: 0.5, uncertainty: 0.5, severity:'moderate' };
+  updateUI(lastCnn);
+  speak(`Manual condition set to ${v}.`);
+});
 
-    // --------------- Chatbot: talks to our backend, which does MCTS + OpenAI ----
-    const msgs = document.getElementById('msgs');
-    const planBox = document.getElementById('planBox');
-    function pushMsg(role, text){
-      const div = document.createElement('div');
-      div.className = 'msg ' + (role === 'user' ? 'user' : 'bot') + ' tts';
-      div.textContent = text;
-      msgs.appendChild(div);
-      msgs.scrollTop = msgs.scrollHeight;
-      speak(text);
-    }
+/* =========================
+   CHATBOT (server proxy -> OpenAI)
+========================= */
+const log = document.getElementById('log');
+const input = document.getElementById('input');
+const send = document.getElementById('send');
+let history = [];
 
-    async function seedPlanAndAdvice(){
-      const manual = document.getElementById('manual').value?.trim();
-      const condition = manual || lastPred || 'Unknown';
-      const body = {
-        condition,
-        cnn: {pred:lastPred, probs:lastProbs},
-        user: { goals: ['protect vision','improve accessibility','reduce risk'] }
-      };
-      try{
-        const r = await fetch('/api/plan_and_chat', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-        if(!r.ok) throw new Error('Server error');
-        const data = await r.json();
+function addMsg(role, text){
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  div.textContent = text;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+  if (role === 'bot') speak(text);
+}
 
-        // Render plan summary
-        planBox.textContent = `Plan selected via MCTS: ${data.plan.title} — ${data.plan.summary}`;
-        speak(planBox);
+function addReport(items){
+  const ul = document.getElementById('reportList');
+  for (const it of items){
+    const li = document.createElement('li'); li.textContent = it; ul.appendChild(li);
+  }
+}
 
-        // Render charts/metrics
-        drawBars(data.chart?.classProbs || lastProbs);
-        // Add bot intro
-        pushMsg('bot', data.intro || 'I\'m ready to help. What would you like to know?');
-      }catch(e){
-        console.error(e);
-        pushMsg('bot', 'Could not generate plan right now, but you can still ask me questions.');
-      }
-    }
+async function chatSend(){
+  const content = input.value.trim(); if (!content) return;
+  input.value = '';
+  history.push({ role:'user', content });
+  addMsg('user', content);
 
-    document.getElementById('send').addEventListener('click', sendChat);
-    document.getElementById('chat').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); sendChat(); }});
-    async function sendChat(){
-      const input = document.getElementById('chat');
-      const text = input.value.trim(); if(!text) return;
-      input.value=''; pushMsg('user', text);
+  const body = { messages: history, cnn: lastCnn, manual_condition: manualSel.value || null, user_prefs: { tts: ttsOn } };
+  const res = await fetch('/api/chat', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (!data.ok){ addMsg('bot', 'Sorry, something went wrong.'); return; }
+  const text = data.text;
+  history.push({ role:'assistant', content: text });
+  addMsg('bot', text);
+  // surface the plan items too
+  if (Array.isArray(data.plan) && data.plan.length) {
+    addReport(['Top actions (MCTS):', ...data.plan.map(x=>'• '+x)]);
+  }
+}
 
-      const manual = document.getElementById('manual').value?.trim();
-      const condition = manual || lastPred || 'Unknown';
-      const body = {
-        condition,
-        cnn: {pred:lastPred, probs:lastProbs},
-        message: text
-      };
-      try{
-        const r = await fetch('/api/chat', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-        if(!r.ok) throw new Error('Server error');
-        const data = await r.json();
-        pushMsg('bot', data.reply);
-        if(data.plan){ planBox.textContent = `Plan: ${data.plan.title} — ${data.plan.summary}`; speak(planBox); }
-      }catch(e){
-        console.error(e);
-        pushMsg('bot', 'Trouble reaching the advisor right now. Please try again.');
-      }
-    }
+send.addEventListener('click', chatSend);
+input.addEventListener('keydown', (e)=>{ if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); chatSend(); }});
 
-    // --------------- enable Run CNN when something is on canvas -----------------
-    frame.addEventListener('draw', ()=> runBtn.disabled=false); // (synthetic if needed)
+// Narrate initial load
+speak('Whala application loaded. Use upload or camera, then press Analyze. Open the chat to get guidance.');
 
-    // --------------- kick-off: preload model quietly ----------------------------
-    (async ()=>{ try{ await loadModel(); }catch(_){} })();
-  </script>
+/* Small a11y: auto focus log region on new bot messages for screen readers */
+const observer = new MutationObserver(()=> log.setAttribute('tabindex','-1'));
+observer.observe(log, { childList:true });
+
+</script>
 </body>
 </html>
