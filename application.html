@@ -405,30 +405,24 @@ function updateRecommendations(topClass, probs){
 }
 
 // ======================= Image handling =======================
+// Replace existing imageToTensor with this function
 async function imageToTensor(imgEl){
   const t0 = performance.now();
-  // Draw to canvas at 384x384, letterbox with black bars to preserve aspect
   const canvas = document.createElement('canvas');
   canvas.width = IMG_SIZE; canvas.height = IMG_SIZE;
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = "#000"; ctx.fillRect(0,0,IMG_SIZE,IMG_SIZE);
-  const iw = imgEl.naturalWidth || imgEl.videoWidth || imgEl.width;
-  const ih = imgEl.naturalHeight || imgEl.videoHeight || imgEl.height;
-  const scale = Math.min(IMG_SIZE/iw, IMG_SIZE/ih);
-  const w = Math.round(iw*scale), h = Math.round(ih*scale);
-  const x = Math.floor((IMG_SIZE - w)/2), y = Math.floor((IMG_SIZE - h)/2);
-  ctx.drawImage(imgEl, x,y,w,h);
-  // Extract RGBA and keep last image for audit
+  // Direct resize (no letterbox) — matches torchvision.Resize((IMG_SIZE, IMG_SIZE))
+  ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
+
   const imgData = ctx.getImageData(0,0,IMG_SIZE,IMG_SIZE);
   lastImageRGBA = imgData;
-  // Convert to Float32 NCHW scaled [0,1]
   const N = IMG_SIZE*IMG_SIZE;
   const dataR = new Float32Array(N);
   const dataG = new Float32Array(N);
   const dataB = new Float32Array(N);
   const d = imgData.data;
-  for (let i=0, p=0; i<d.length; i+=4, p++){
-    dataR[p] = d[i]   / 255.0;
+  for (let i=0,p=0; i<d.length; i+=4, p++){
+    dataR[p] = d[i] / 255.0;
     dataG[p] = d[i+1] / 255.0;
     dataB[p] = d[i+2] / 255.0;
   }
