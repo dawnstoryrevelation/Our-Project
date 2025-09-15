@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>B-Eye-O-Marker CNN-V2 — Retina Screening</title>
+<meta name="description" content="Accessible retina analysis interface using B-Eye-O-Marker CNN-V2 (BiNLOP-3) ONNX." />
+<style>
+  :root {
+    --bg: #0b1324;
+    --surface: #121a2e;
+    --text: #e8edf7;
+    --muted: #b9c3d9;
+    --accent: #6aa9ff;
+    --accent-2: #4ee0c9;
+    --danger: #ff6a6a;
+    --ok: #84fba2;
+    --warn: #ffd166;
+    --focus: #a7d3ff;
+    --card: rgba(255,255,255,0.06);
+    --border: rgba(255,255,255,0.15);
+  }
+  [data-theme="light"] {
+    --bg: #f7fafc;
+    --surface: #ffffff;
+    --text: #0d1321;
+    --muted: #3f4a63;
+    --accent: #2b6cb0;
+    --accent-2: #0f9d8f;
+    --danger: #c53030;
+    --ok: #2f855a;
+    --warn: #b7791f;
+    --focus: #2b6cb0;
+    --card: rgba(0,0,0,0.04);
+    --border: rgba(0,0,0,0.12);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"; }
+  a { color: var(--accent); }
+  header { padding: 1rem 1.25rem; display: flex; gap: 1rem; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top:0; z-index: 10; }
+  header h1 { margin: 0; font-size: clamp(1rem, 3vw, 1.125rem); font-weight: 700; letter-spacing: .5px; }
+  header .controls { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+  main { display: grid; grid-template-columns: 1fr; gap: 1rem; padding: 1rem; max-width: 1200px; margin: 0 auto; }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+  @media (min-width: 960px) { .grid { grid-template-columns: 1fr 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1rem; }
+  .card h2, .card h3 { margin-top: 0; }
+  .btn { background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: .7rem 1rem; cursor: pointer; font-weight: 700; }
+  .btn[disabled] { opacity: .5; cursor: not-allowed; }
+  .btn.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn.warn { background: var(--warn); color: #131313; }
+  .btn.danger { background: var(--danger); }
+  .row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+  .stack { display: grid; gap: .5rem; }
+  input[type="file"], select, input[type="text"], input[type="range"] {
+    background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    padding: .6rem .75rem; border-radius: 10px; width: 100%;
+  }
+  label { font-size: .9rem; color: var(--muted); }
+  .pill { display: inline-flex; align-items:center; gap:.4rem; padding:.25rem .5rem; border-radius:999px; border:1px solid var(--border); background: var(--surface); font-size:.8rem; color:var(--muted); }
+  .kbd { padding: .1rem .35rem; border:1px solid var(--border); border-radius:6px; background:var(--surface); }
+  .vis { width:100%; height:320px; background: conic-gradient(from 90deg at 50% 50%, #1c2541, #0b1324); border:1px dashed var(--border); border-radius: 12px; display:grid; place-items:center; color:var(--muted); }
+  figure { margin:0; }
+  figcaption { font-size:.85rem; color:var(--muted); margin-top:.5rem; }
+  table { width:100%; border-collapse: collapse; }
+  th, td { border-bottom:1px solid var(--border); text-align:left; padding:.5rem; }
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+  .live { aria-live: polite; }
+  .bar { height: 10px; background: var(--accent); border-radius: 6px; }
+  .legend { display:flex; flex-wrap: wrap; gap:.4rem; margin:.25rem 0; }
+  .legend span { font-size:.8rem; padding:.2rem .4rem; border-radius:6px; background: var(--surface); border:1px solid var(--border); }
+  .footnote { font-size:.85rem; color: var(--muted); }
+</style>
+</head>
+<body data-theme="dark">
+<header role="banner">
+  <h1 id="appTitle">B-Eye-O-Marker CNN-V2 (BiNLOP-3) — Accessible Retina Screening</h1>
+  <div class="controls" role="group" aria-label="Global controls">
+    <button class="btn secondary" id="themeToggle" aria-pressed="false" aria-label="Toggle light or dark theme">Toggle Theme</button>
+    <label for="fontScale" class="sr-only">Font size</label>
+    <input id="fontScale" type="range" min="90" max="130" value="100" aria-label="Font size percent" />
+    <span class="pill" aria-hidden="true">A11y: <span id="a11yStatus">WCAG-AA</span></span>
+    <button class="btn secondary" id="ttsToggle" aria-pressed="false">TTS: Off</button>
+    <button class="btn secondary" id="ttsStop">Stop TTS</button>
+  </div>
+</header>
+
+<main role="main">
+  <!-- Intro & Model status -->
+  <section class="card" aria-labelledby="introHeading">
+    <h2 id="introHeading">Overview</h2>
+    <p>
+      This page runs the <strong>B-Eye-O-Marker CNN-V2</strong> (BiNLOP-3) directly in your browser using ONNX Runtime.
+      It can analyze retinal photographs to identify <em>potential</em> eye conditions. This tool is for
+      <strong>information only</strong>—it is <strong>not</strong> a medical diagnosis. Always consult a qualified clinician.
+    </p>
+    <div class="row">
+      <div class="pill" id="modelStatus" aria-live="polite">Model: <span>loading…</span></div>
+      <div class="pill">Backend: <span id="backendName">—</span></div>
+      <div class="pill">ONNX opset: <span id="opset">18</span></div>
+      <div class="pill">Input: <span>3×384×384</span></div>
+    </div>
+    <div class="footnote">Keyboard shortcuts: <span class="kbd">1</span> Camera, <span class="kbd">2</span> Upload, <span class="kbd">3</span> Manual, <span class="kbd">S</span> Speak selection.</div>
+  </section>
+
+  <!-- Modes -->
+  <section class="grid" aria-labelledby="modesHeading">
+    <h2 id="modesHeading" class="sr-only">Input Modes</h2>
+
+    <!-- Camera -->
+    <div class="card" id="cameraCard" aria-labelledby="cameraHeading">
+      <h3 id="cameraHeading">Mode 1 — Camera</h3>
+      <p id="cameraDesc">Use your device camera to capture a fundus/eye photo.</p>
+      <div class="stack" role="group" aria-describedby="cameraDesc">
+        <div class="row">
+          <button class="btn" id="startCam">Start Camera</button>
+          <button class="btn secondary" id="capture" disabled>Capture</button>
+          <button class="btn secondary" id="stopCam" disabled>Stop</button>
+        </div>
+        <video id="video" playsinline muted style="width:100%; max-height:320px; border-radius:12px; border:1px solid var(--border); background:#000" aria-label="Live camera preview"></video>
+        <canvas id="camCanvas" class="sr-only" aria-hidden="true"></canvas>
+      </div>
+    </div>
+
+    <!-- Upload -->
+    <div class="card" id="uploadCard" aria-labelledby="uploadHeading">
+      <h3 id="uploadHeading">Mode 2 — Upload Photo</h3>
+      <p id="uploadDesc">Upload an existing eye image (JPEG/PNG) for analysis.</p>
+      <div class="stack" role="group" aria-describedby="uploadDesc">
+        <label for="fileInput">Choose image file</label>
+        <input id="fileInput" type="file" accept="image/jpeg,image/png,image/jpg" />
+        <img id="preview" alt="Uploaded image preview" style="width:100%; max-height:320px; object-fit:contain; border-radius:12px; border:1px solid var(--border);" />
+        <div class="row">
+          <button class="btn" id="analyzeUpload" disabled>Analyze Uploaded Image</button>
+          <button class="btn secondary" id="clearUpload" disabled>Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manual -->
+    <div class="card" id="manualCard" aria-labelledby="manualHeading">
+      <h3 id="manualHeading">Mode 3 — Manual</h3>
+      <p id="manualDesc">Select a condition manually to view guidance. The CNN does not run in this mode.</p>
+      <div class="stack" role="group" aria-describedby="manualDesc">
+        <label for="manualSelect">Select a condition</label>
+        <select id="manualSelect" aria-label="Manual condition selection">
+          <option value="" selected>— Choose —</option>
+          <option value="Normal">Normal</option>
+          <option value="DiabeticRetinopathy">Diabetic Retinopathy (DR)</option>
+          <option value="DiabeticMacularEdema">Diabetic Macular Edema (DME)</option>
+          <option value="AgeRelatedMacularDegeneration">Age-Related Macular Degeneration (AMD)</option>
+          <option value="Glaucoma">Glaucoma</option>
+          <option value="RetinalDetachment">Retinal Detachment (RD)</option>
+          <option value="EpiretinalMembrane">Epiretinal Membrane (ERM)</option>
+          <option value="VitreousDetachment">Vitreous Detachment</option>
+          <option value="Other">Other</option>
+        </select>
+        <button class="btn" id="showManual">Show Guidance</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Analysis & Results -->
+  <section class="card" aria-labelledby="analysisHeading">
+    <h2 id="analysisHeading">Analysis & Results</h2>
+
+    <div class="row">
+      <button class="btn" id="runAnalysis" aria-describedby="runHelp">Run CNN on the current image</button>
+      <span id="runHelp" class="footnote">Source: last camera capture or uploaded photo (resized to 384×384). Multi-label probabilities via sigmoid.</span>
+      <button class="btn secondary" id="speakResults">Speak Results</button>
+    </div>
+
+    <div class="grid">
+      <div>
+        <figure>
+          <canvas id="probChart" role="img" aria-label="Bar chart of predicted probabilities by condition" aria-describedby="probCaption"></canvas>
+          <figcaption id="probCaption">Predicted probability distribution across 9 classes.</figcaption>
+        </figure>
+        <div class="legend" aria-hidden="true" id="legend"></div>
+
+        <div class="stack" aria-live="polite">
+          <h3>Top Predictions</h3>
+          <div id="topPred" class="stack"></div>
+          <label for="thr">Positive threshold (<span id="thrVal">0.50</span>)</label>
+          <input id="thr" type="range" min="0" max="100" value="50" />
+          <div id="posList" class="stack"></div>
+        </div>
+
+        <div class="stack" aria-live="polite">
+          <h3>Confidence Metrics</h3>
+          <div id="metrics" class="stack"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="stack" aria-live="polite">
+          <h3>Recommendations & Guidance</h3>
+          <div id="recs" class="stack"></div>
+        </div>
+
+        <div class="stack">
+          <h3>Accessible Table</h3>
+          <table aria-describedby="tabNote">
+            <thead>
+              <tr><th scope="col">Condition</th><th scope="col">Probability</th></tr>
+            </thead>
+            <tbody id="probRows"></tbody>
+          </table>
+          <p id="tabNote" class="footnote">Exact probabilities are shown for screen readers and precise review.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- About/Disclaimers -->
+  <section class="card" aria-labelledby="aboutHeading">
+    <h2 id="aboutHeading">About, Privacy & Disclaimer</h2>
+    <p>
+      This application runs entirely in your browser. Images never leave your device. Model:
+      <code>B-Eye-O-Marker_CNN-V2.onnx</code> (BiNLOP-3 activations). Outputs are probabilistic and may be wrong.
+      For symptoms such as pain, sudden vision loss, flashing lights, or a curtain over vision, seek emergency care immediately.
+    </p>
+    <ul>
+      <li><strong>Not medical advice:</strong> Informational tool only; consult an eye care professional.</li>
+      <li><strong>Best image:</strong> Centered, clear fundus/retina image, good illumination, minimal glare.</li>
+      <li><strong>Accessibility:</strong> All sections support TTS and screen readers. Use the TTS buttons above.</li>
+    </ul>
+  </section>
+</main>
+
+<!-- Dependencies -->
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js" integrity="" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<script>
+/* ========================= Config ========================= */
+const MODEL_PATH = "B-Eye-O-Marker_CNN-V2.onnx"; // same folder
+const INPUT_SIZE = 384;
+const LABELS = [
+  "Normal","DiabeticRetinopathy","DiabeticMacularEdema",
+  "AgeRelatedMacularDegeneration","Glaucoma","RetinalDetachment",
+  "EpiretinalMembrane","VitreousDetachment","Other"
+];
+const NICE = {
+  "Normal":"Normal",
+  "DiabeticRetinopathy":"Diabetic Retinopathy (DR)",
+  "DiabeticMacularEdema":"Diabetic Macular Edema (DME)",
+  "AgeRelatedMacularDegeneration":"Age-Related Macular Degeneration (AMD)",
+  "Glaucoma":"Glaucoma",
+  "RetinalDetachment":"Retinal Detachment (RD)",
+  "EpiretinalMembrane":"Epiretinal Membrane (ERM)",
+  "VitreousDetachment":"Vitreous Detachment",
+  "Other":"Other / Uncertain"
+};
+
+/* ========================= Accessibility & TTS ========================= */
+let ttsEnabled = false;
+const synth = window.speechSynthesis;
+function speakText(text, priority = true) {
+  if (!ttsEnabled || !text) return;
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1.02; u.pitch = .98; u.volume = 1.0;
+    // choose a human-like voice if available
+    const voices = synth.getVoices().filter(v => /en-|en_/i.test(v.lang));
+    if (voices.length) u.voice = voices.find(v=>/Google|Microsoft|Apple/i.test(v.name)) || voices[0];
+    if (priority && synth.speaking) synth.cancel();
+    synth.speak(u);
+  } catch (e) {}
+}
+document.getElementById("ttsToggle").addEventListener("click", (e)=>{
+  ttsEnabled = !ttsEnabled;
+  e.currentTarget.textContent = "TTS: " + (ttsEnabled ? "On" : "Off");
+  e.currentTarget.setAttribute("aria-pressed", String(ttsEnabled));
+  if (ttsEnabled) speakText("Text to speech enabled.");
+});
+document.getElementById("ttsStop").addEventListener("click", ()=> synth.cancel());
+document.addEventListener("keydown", (e)=>{
+  if (e.key.toLowerCase()==="s") {
+    const region = document.getElementById("analysisHeading").closest(".card");
+    speakText(region?.innerText || "No content.");
+  }
+});
+
+/* ========================= Theme & font scale ========================= */
+const themeToggle = document.getElementById("themeToggle");
+themeToggle.addEventListener("click", ()=>{
+  const now = document.body.getAttribute("data-theme")==="dark" ? "light" : "dark";
+  document.body.setAttribute("data-theme", now);
+  themeToggle.setAttribute("aria-pressed", String(now==="light"));
+});
+document.getElementById("fontScale").addEventListener("input",(e)=>{
+  const v = e.target.valueAsNumber || 100;
+  document.documentElement.style.fontSize = (v/100)+"em";
+});
+
+/* ========================= ONNX Runtime Setup ========================= */
+const modelStatus = document.getElementById("modelStatus").querySelector("span");
+const backendName = document.getElementById("backendName");
+let session = null;
+(async function initSession(){
+  try {
+    const providers = [];
+    if (await ort.env.webgpu.isSupported()) providers.push("webgpu");
+    providers.push("wasm");
+    session = await ort.InferenceSession.create(MODEL_PATH, {
+      executionProviders: providers,
+      graphOptimizationLevel: "all",
+      enableMemPattern: true,
+      extra: { session: { logSeverityLevel: 3 } }
+    });
+    backendName.textContent = session?.executionProvider || providers[0] || "wasm";
+    modelStatus.textContent = "loaded ✓";
+    speakText("Model loaded.");
+  } catch (err) {
+    modelStatus.textContent = "failed to load";
+    backendName.textContent = "—";
+    console.error(err);
+    alert("Failed to load ONNX model. Make sure B-Eye-O-Marker_CNN-V2.onnx is next to this file and served over HTTPS/localhost.");
+  }
+})();
+
+/* ========================= Image acquisition ========================= */
+const video = document.getElementById("video");
+const camCanvas = document.getElementById("camCanvas");
+const startCamBtn = document.getElementById("startCam");
+const captureBtn = document.getElementById("capture");
+const stopCamBtn = document.getElementById("stopCam");
+let stream = null;
+let lastImageBitmap = null;
+
+startCamBtn.addEventListener("click", async ()=>{
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 }}, audio:false });
+    video.srcObject = stream;
+    await video.play();
+    startCamBtn.disabled = true; captureBtn.disabled = false; stopCamBtn.disabled = false;
+    speakText("Camera started. Press capture to take a photo.");
+  } catch (e) {
+    alert("Camera access failed: " + e.message);
+  }
+});
+captureBtn.addEventListener("click", async ()=>{
+  if (!video.videoWidth) return;
+  camCanvas.width = video.videoWidth;
+  camCanvas.height = video.videoHeight;
+  const ctx = camCanvas.getContext("2d");
+  ctx.drawImage(video, 0, 0);
+  lastImageBitmap = await createImageBitmap(camCanvas);
+  speakText("Photo captured.");
+});
+stopCamBtn.addEventListener("click", ()=>{
+  if (stream) stream.getTracks().forEach(t=>t.stop());
+  video.srcObject = null; startCamBtn.disabled = false; captureBtn.disabled = true; stopCamBtn.disabled = true;
+  speakText("Camera stopped.");
+});
+
+/* Upload mode */
+const fileInput = document.getElementById("fileInput");
+const preview = document.getElementById("preview");
+const analyzeUploadBtn = document.getElementById("analyzeUpload");
+const clearUploadBtn = document.getElementById("clearUpload");
+let uploadedImageBitmap = null;
+
+fileInput.addEventListener("change", async (e)=>{
+  const f = e.target.files?.[0];
+  if (!f) return;
+  const url = URL.createObjectURL(f);
+  preview.src = url;
+  preview.onload = async ()=>{
+    uploadedImageBitmap = await createImageBitmap(preview);
+    analyzeUploadBtn.disabled = false; clearUploadBtn.disabled = false;
+    speakText("Image uploaded. Ready to analyze.");
+  };
+});
+clearUploadBtn.addEventListener("click", ()=>{
+  uploadedImageBitmap = null; preview.removeAttribute("src"); fileInput.value = "";
+  analyzeUploadBtn.disabled = true; clearUploadBtn.disabled = true;
+  speakText("Upload cleared.");
+});
+
+/* ========================= Preprocess & Run ========================= */
+function imageBitmapToTensor(imgBitmap) {
+  const off = new OffscreenCanvas(INPUT_SIZE, INPUT_SIZE);
+  const ctx = off.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(imgBitmap, 0, 0, INPUT_SIZE, INPUT_SIZE);
+  const { data } = ctx.getImageData(0, 0, INPUT_SIZE, INPUT_SIZE); // RGBA
+  // NCHW float32 normalized [0,1]
+  const chw = new Float32Array(3 * INPUT_SIZE * INPUT_SIZE);
+  let p = 0, rBase = 0, gBase = INPUT_SIZE*INPUT_SIZE, bBase = 2*INPUT_SIZE*INPUT_SIZE;
+  for (let i = 0; i < data.length; i += 4) {
+    const R = data[i]   * (1/255);
+    const G = data[i+1] * (1/255);
+    const B = data[i+2] * (1/255);
+    chw[rBase + p] = R;
+    chw[gBase + p] = G;
+    chw[bBase + p] = B;
+    p++;
+  }
+  const tensor = new ort.Tensor("float32", chw, [1,3,INPUT_SIZE,INPUT_SIZE]);
+  return tensor;
+}
+
+async function runOnTensor(tensor) {
+  if (!session) { alert("Model not loaded yet."); return null; }
+  const feeds = { "input": tensor };
+  const t0 = performance.now();
+  const output = await session.run(feeds);
+  const dt = performance.now() - t0;
+  // Output name may be 'logits' from export script; fallback to first
+  const outName = Object.keys(output)[0];
+  const logits = output[outName].data; // Float32Array length 9
+  const probs = Array.from(sigmoidArray(logits));
+  return { probs, ms: dt, logits: Array.from(logits) };
+}
+
+function sigmoidArray(arr) {
+  const out = new Float32Array(arr.length);
+  for (let i=0;i<arr.length;i++) out[i] = 1/(1+Math.exp(-arr[i]));
+  return out;
+}
+
+async function analyzeFromBitmap(bitmap) {
+  document.getElementById("runAnalysis").disabled = true;
+  const tensor = imageBitmapToTensor(bitmap);
+  const res = await runOnTensor(tensor);
+  document.getElementById("runAnalysis").disabled = false;
+  if (res) renderResults(res.probs, res.ms);
+  return res;
+}
+
+/* ========================= Charts & Tables ========================= */
+let chart = null;
+const chartEl = document.getElementById("probChart");
+const legendEl = document.getElementById("legend");
+const probRows = document.getElementById("probRows");
+const topPred = document.getElementById("topPred");
+const recs = document.getElementById("recs");
+const metricsBox = document.getElementById("metrics");
+const thr = document.getElementById("thr");
+const thrVal = document.getElementById("thrVal");
+const posList = document.getElementById("posList");
+
+function formatPct(x){ return (x*100).toFixed(1)+"%"; }
+
+function renderResults(probs, ms) {
+  // sort + data sets
+  const items = LABELS.map((lab,i)=>({ label: lab, pretty: NICE[lab], p: probs[i] || 0 }));
+  const sorted = items.slice().sort((a,b)=>b.p-a.p);
+  const top = sorted[0];
+
+  // Chart
+  const data = {
+    labels: sorted.map(x=>x.pretty),
+    datasets: [{
+      label: "Probability",
+      data: sorted.map(x=>+(x.p*100).toFixed(2)),
+      borderWidth: 1
+    }]
+  };
+  if (chart) chart.destroy();
+  chart = new Chart(chartEl, {
+    type: "bar",
+    data,
+    options: {
+      responsive: true,
+      animation: { duration: 600 },
+      scales: {
+        y: { beginAtZero: true, title: { display: true, text: "Probability (%)" } },
+        x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { mode: "index", intersect: false }
+      }
+    }
+  });
+  legendEl.innerHTML = data.labels.map(l=>`<span>${l}</span>`).join("");
+
+  // Table
+  probRows.innerHTML = items
+    .sort((a,b)=>b.p-a.p)
+    .map(x=>`<tr><td>${x.pretty}</td><td>${formatPct(x.p)}</td></tr>`)
+    .join("");
+
+  // Top predictions
+  topPred.innerHTML = `
+    <div class="pill">Top-1: <strong>${NICE[top.label]}</strong> (${formatPct(top.p)})</div>
+    <div class="pill">Latency: ${ms.toFixed(1)} ms</div>
+  `;
+
+  // Positive list by threshold
+  updatePositives(probs);
+
+  // Confidence metrics
+  const entropy = -probs.map(p=> p>0? p*Math.log2(p): 0).reduce((a,b)=>a+b,0);
+  const maxP = top.p;
+  const margin = top.p - (sorted[1]?.p ?? 0);
+  metricsBox.innerHTML = `
+    <div class="pill">Entropy: ${entropy.toFixed(3)}</div>
+    <div class="pill">Max prob: ${formatPct(maxP)}</div>
+    <div class="pill">Top-1 margin: ${(margin*100).toFixed(1)} pp</div>
+  `;
+
+  // Recommendations & guidance
+  renderRecommendations(sorted);
+
+  // TTS summary
+  speakText(`Top prediction ${NICE[top.label]} with probability ${Math.round(top.p*100)} percent. Inference time ${ms.toFixed(0)} milliseconds. See guidance section below.`);
+}
+
+function updatePositives(probs) {
+  const t = (thr.valueAsNumber || 50) / 100;
+  thrVal.textContent = t.toFixed(2);
+  const pos = LABELS
+    .map((lab,i)=>({lab, pretty: NICE[lab], p: probs[i]}))
+    .filter(x=> x.p >= t)
+    .sort((a,b)=>b.p-a.p);
+  posList.innerHTML = pos.length
+    ? pos.map(x=>`<div class="row"><span class="pill">${x.pretty}</span><div style="flex:1"><div class="bar" style="width:${(x.p*100).toFixed(1)}%"></div></div><span>${formatPct(x.p)}</span></div>`).join("")
+    : `<div class="pill">No condition exceeded the threshold.</div>`;
+}
+thr.addEventListener("input", ()=>{
+  if (!chart) return;
+  // Reuse last probabilities from table
+  const probs = [...document.querySelectorAll("#probRows tr td:last-child")]
+      .map(td => parseFloat(td.textContent) / 100);
+  updatePositives(probs);
+});
+
+/* ========================= Recommendations ========================= */
+function renderRecommendations(sorted) {
+  const top1 = sorted[0];
+  const guide = {
+    "Normal": [
+      "Routine check: schedule comprehensive eye exam every 1–2 years or as advised.",
+      "Maintain healthy lifestyle: manage blood sugar, blood pressure, and lipids.",
+      "If you notice visual changes, seek evaluation promptly."
+    ],
+    "DiabeticRetinopathy": [
+      "Tight glycemic, blood pressure, and lipid control reduce progression risk.",
+      "Discuss dilated fundus examination; retinal imaging and OCT may be indicated.",
+      "If moderate–severe suspicion, request referral to retina specialist."
+    ],
+    "DiabeticMacularEdema": [
+      "OCT is typically used to confirm macular thickening/edema.",
+      "Treatment options include intravitreal anti-VEGF or steroids per specialist.",
+      "Urgent evaluation recommended if central vision is affected."
+    ],
+    "AgeRelatedMacularDegeneration": [
+      "Consider AREDS-2 supplements for intermediate AMD if appropriate.",
+      "Self-monitor with Amsler grid; avoid smoking; UV protection.",
+      "Prompt referral if metamorphopsia or rapid vision change develops."
+    ],
+    "Glaucoma": [
+      "Comprehensive exam with IOP measurement, gonioscopy, OCT RNFL, and visual fields.",
+      "Adherence to therapy (if any) is critical; discuss side-effects with clinician.",
+      "Family screening may be warranted given hereditary risk."
+    ],
+    "RetinalDetachment": [
+      "This can be vision-threatening. Seek urgent ophthalmic evaluation.",
+      "Symptoms: flashes, floaters, curtain over vision require emergency care.",
+      "Avoid activities that risk head/eye trauma until cleared."
+    ],
+    "EpiretinalMembrane": [
+      "OCT can confirm macular pucker; monitor visual acuity and metamorphopsia.",
+      "Surgery (membrane peel) may be considered for significant distortion.",
+      "Discuss risks/benefits with a retina specialist."
+    ],
+    "VitreousDetachment": [
+      "Common with age; rule out retinal tear if new floaters/flashes occur.",
+      "Return urgently if a curtain or shadow develops.",
+      "Protective follow-up as advised by clinician."
+    ],
+    "Other": [
+      "Findings may not match trained categories or image quality is limited.",
+      "Consider re-acquiring a clearer image or seeking comprehensive exam.",
+      "Discuss symptoms and history with a clinician."
+    ]
+  };
+  const lines = guide[top1.label] || guide["Other"];
+  recs.innerHTML = `
+    <div class="stack">
+      <div class="pill">Primary: <strong>${NICE[top1.label]}</strong> (${formatPct(top1.p)})</div>
+      <ul>${lines.map(li=>`<li>${li}</li>`).join("")}</ul>
+      <p class="footnote">This is not a diagnosis. Seek professional care for any symptoms or concerns.</p>
+    </div>
+  `;
+}
+
+/* ========================= Manual Mode ========================= */
+document.getElementById("showManual").addEventListener("click", ()=>{
+  const sel = document.getElementById("manualSelect").value;
+  if (!sel) { alert("Select a condition first."); return; }
+  // build a synthetic probability vector with 1.0 for selection, small for others
+  const probs = LABELS.map(l => l===sel ? 0.95 : 0.05/(LABELS.length-1));
+  renderResults(probs, 0);
+  speakText(`Manual mode. Showing guidance for ${NICE[sel]}.`);
+});
+
+/* ========================= Analyze triggers ========================= */
+document.getElementById("analyzeUpload").addEventListener("click", async ()=>{
+  if (!uploadedImageBitmap) return alert("No uploaded image.");
+  await analyzeFromBitmap(uploadedImageBitmap);
+});
+document.getElementById("runAnalysis").addEventListener("click", async ()=>{
+  const src = uploadedImageBitmap || lastImageBitmap;
+  if (!src) { alert("Provide an image via Camera or Upload first."); return; }
+  await analyzeFromBitmap(src);
+});
+
+/* ========================= Keyboard shortcuts ========================= */
+document.addEventListener("keydown", (e)=>{
+  if (e.target && ["INPUT","SELECT","TEXTAREA"].includes(e.target.tagName)) return;
+  const k = e.key;
+  if (k==="1") startCamBtn.click();
+  if (k==="2") fileInput.click();
+  if (k==="3") document.getElementById("manualSelect").focus();
+});
+
+/* ========================= Small UX niceties ========================= */
+window.addEventListener("load", ()=>{
+  const theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? "light":"dark";
+  document.body.setAttribute("data-theme", theme);
+});
+
+/* ========================= Ensure SR announcement ========================= */
+setTimeout(()=> {
+  const live = document.createElement("div");
+  live.className = "sr-only"; live.setAttribute("aria-live","polite"); live.textContent = "Interface loaded.";
+  document.body.appendChild(live);
+}, 300);
+</script>
+</body>
+</html>
