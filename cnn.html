@@ -2,658 +2,726 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>B-Eye-O-Marker — CNN-V2 (BiNLOP-3)</title>
-<meta name="description" content="Accessible web interface for B-Eye-O-Marker CNN-V2 (BiNLOP-3) ONNX: detect, diagnose and identify potential eye ailments from camera or photos, with full TTS."/>
+<meta name="description" content="Accessible, TTS-enabled retinal analysis demo using B-Eye-O-Marker_CNN-V2 (BiNLOP-3) ONNX." />
+<!-- Chart.js (for accessible visualizations; table is provided for screen readers) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha256-s3z7uLQe2jF7m9uN0uOAhjHLtPq4dPSmabnxyOV9B6o=" crossorigin="anonymous"></script>
+<!-- ONNX Runtime Web (WASM; widely supported) -->
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js" integrity="sha256-7z+u6QWT9P4gH1o8p6Q1mTv1QX+/dO1VfWOu2+Y1WJs=" crossorigin="anonymous"></script>
 <style>
   :root{
-    --bg:#0f1222; --panel:#151936; --panel-2:#1b2147; --text:#e9ecff; --muted:#b9c1ff;
-    --accent:#7aa2ff; --accent-2:#63e6be; --danger:#ff6b6b; --ok:#94f3a2; --warn:#ffd166;
-    --focus:#ffe08a; --border:#2c3366; --shadow:0 10px 30px rgba(0,0,0,.35);
+    --bg: #0b1020; --panel:#11162b; --panel-2:#0d1226; --text:#e7ecff; --muted:#9fb0ff;
+    --accent:#7aa2ff; --accent-2:#5ce1e6; --good:#6be675; --warn:#ffd166; --bad:#ff6b6b;
+    --focus:#ffe27a; --border:#1f2a48; --shadow: rgba(0,0,0,0.35);
+    --radius: 16px; --radius-sm: 12px;
   }
-  @media (prefers-color-scheme: light){
-    :root{ --bg:#f6f8ff; --panel:#ffffff; --panel-2:#f2f4ff; --text:#111320; --muted:#3b3f66; --border:#d8dcff; --shadow:0 10px 30px rgba(0,0,0,.08);}
+  [data-contrast="high"]{
+    --bg:#000; --panel:#050505; --panel-2:#0a0a0a; --text:#fff; --muted:#ccc; --accent:#00e; --accent-2:#0aa;
+    --focus:#ff0; --border:#444;
   }
-  html,body{margin:0;padding:0;background:linear-gradient(180deg,var(--bg),#0b0e1b);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;line-height:1.5}
-  a{color:var(--accent)}
-  .wrap{max-width:1200px;margin:0 auto;padding:16px}
-  .skip{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}
-  .skip:focus{position:fixed;left:16px;top:16px;width:auto;height:auto;background:var(--panel);color:var(--text);padding:8px 12px;border-radius:8px;box-shadow:var(--shadow);outline:3px solid var(--focus)}
-  header{display:grid;gap:12px;align-items:center;margin:16px 0;padding:16px;border:1px solid var(--border);background:radial-gradient(1200px 400px at 20% -20%, rgba(122,162,255,.25), transparent 60%), var(--panel);border-radius:18px;box-shadow:var(--shadow)}
-  header h1{margin:0;font-size:clamp(22px,4vw,36px)}
-  header p{margin:0;color:var(--muted)}
-  header .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-  .btn, button, input[type=file]::file-selector-button{
-    background:var(--accent);color:#0b0d1a;border:none;padding:10px 14px;border-radius:12px;font-weight:600;cursor:pointer;
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration:0.01ms !important; scroll-behavior:auto !important; }
   }
-  .btn.secondary{background:var(--panel-2);color:var(--text);border:1px solid var(--border)}
-  .btn.danger{background:var(--danger);color:#fff}
-  .btn:focus{outline:3px solid var(--focus)}
-  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
-  .card{grid-column:span 12;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
-  @media(min-width:900px){
-    .card.half{grid-column:span 6}
-    .card.third{grid-column:span 4}
+  html,body{height:100%}
+  body{
+    margin:0; background: radial-gradient(1200px 900px at 10% 0%, #12193a, var(--bg)) fixed;
+    color:var(--text); font: 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
   }
-  .card h2{margin:.2rem 0 0.4rem;font-size:1.25rem}
-  .muted{color:var(--muted)}
-  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-  .mode-tabs{display:flex;gap:6px;flex-wrap:wrap}
-  .mode-tabs button{background:var(--panel-2);border:1px solid var(--border);color:var(--text)}
-  .mode-tabs button[aria-selected="true"]{background:var(--accent-2);color:#002414}
-  .sr-only{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}
-  .label{font-weight:600}
-  .bar{height:12px;background:var(--panel-2);border-radius:999px;overflow:hidden;border:1px solid var(--border)}
-  .bar>span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));width:0%}
-  .live{border-left:4px solid var(--accent);padding-left:10px}
-  .danger{color:var(--danger)} .ok{color:var(--ok)} .warn{color:var(--warn)}
-  figure{margin:0}
-  figcaption{color:var(--muted);font-size:.9rem;margin-top:4px}
-  table{width:100%;border-collapse:separate;border-spacing:0 8px}
-  th,td{padding:8px 12px;border-bottom:1px dashed var(--border)}
-  th{text-align:left}
-  .footer{color:var(--muted);font-size:.9rem;margin:20px 0}
-  .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);margin-right:6px}
-  .danger-bg{background:rgba(255,107,107,.08)}
-  .notice{padding:10px;border-radius:12px;border:1px solid var(--border);background:var(--panel-2)}
-  .chart-wrap{position:relative;height:260px}
-  .controls select, .controls input[type=range]{background:var(--panel-2);color:var(--text);border:1px solid var(--border);padding:8px;border-radius:10px}
-  .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;background:var(--panel-2);border:1px solid var(--border);border-radius:6px;padding:2px 6px}
+  .container{max-width:1200px;margin:0 auto;padding:24px}
+  header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .brand{display:flex;gap:12px;align-items:center}
+  .logo{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:0 6px 22px var(--shadow)}
+  h1{font-weight:800;letter-spacing:0.4px;margin:0}
+  .panel{background:linear-gradient(180deg,var(--panel),var(--panel-2)); border:1px solid var(--border); border-radius:var(--radius); box-shadow:0 10px 30px var(--shadow)}
+  .panel .content{padding:18px}
+  nav.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:6px}
+  .tab{cursor:pointer;border:none;background:transparent;color:var(--muted);padding:10px 14px;border-radius:12px;transition:all .2s}
+  .tab[aria-selected="true"]{background:linear-gradient(180deg,#1a2142,#0f1634);color:var(--text);box-shadow:0 6px 18px var(--shadow)}
+  .grid{display:grid;gap:16px}
+  @media(min-width:960px){ .grid.cols-2{grid-template-columns:1.1fr 1fr} .grid.cols-3{grid-template-columns:1fr 1fr 1fr} }
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .btn{
+    background:linear-gradient(180deg,#1f2a52,#152045); border:1px solid var(--border); color:var(--text);
+    padding:10px 14px; border-radius:12px; cursor:pointer; transition:transform .05s ease, box-shadow .2s;
+  }
+  .btn:hover{box-shadow:0 8px 24px var(--shadow)}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:linear-gradient(180deg,var(--accent),#456bff); color:#08102a; font-weight:700}
+  .btn.warn{background:linear-gradient(180deg,#573116,#2a140b); border:1px solid #6a3b1a}
+  input[type="file"], input[type="text"], select{
+    background:#0b1230;border:1px solid var(--border);color:var(--text);padding:10px;border-radius:10px
+  }
+  label{display:block;margin-bottom:6px;color:var(--muted)}
+  .kbd{background:#0a1030;border:1px solid var(--border); padding:2px 6px; border-radius:8px}
+  .card{padding:14px;border-top:1px solid var(--border)}
+  .sr-only{position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important;}
+  .live{position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden;}
+  .pill{display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:100px; border:1px solid var(--border); background:#0a1230; color:var(--muted); font-size:12px}
+  .meter{height:10px;background:#0b122a;border-radius:100px;border:1px solid var(--border); overflow:hidden}
+  .meter > span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+  .warning{color:var(--warn)}
+  .danger{color:var(--bad)}
+  .good{color:var(--good)}
+  footer{opacity:.9;margin-top:22px}
+  .flex{display:flex;gap:8px;align-items:center}
+  .right{margin-left:auto}
+  .wide{width:100%}
+  .chart-wrap{position:relative;min-height:280px}
+  .kbd-row{display:flex;gap:10px;flex-wrap:wrap}
+  .vis{border-radius:12px;background:#060a1a; border:1px solid var(--border); padding:8px}
+  .img-preview{width:100%;max-height:420px;object-fit:contain;border-radius:12px;border:1px solid var(--border);background:#050a18}
+  .video{width:100%;max-height:420px;border-radius:12px;border:1px solid var(--border);background:#050a18}
+  .section-title{display:flex;align-items:center;gap:8px;margin:0 0 8px 0}
+  .section-title h2{margin:0}
+  a, button, input, select, textarea{outline-color: var(--focus); outline-offset: 2px}
 </style>
 </head>
-<body>
-<a class="skip" href="#main">Skip to main content</a>
-
-<header role="banner" aria-label="B-Eye-O-Marker header">
-  <div class="wrap">
-    <h1 id="title">B-Eye-O-Marker — CNN-V2 (BiNLOP-3)</h1>
-    <p class="muted">Accessible in-browser eye-condition screening with your ONNX model. <span class="pill">Local</span> <span class="pill">Private</span> <span class="pill">TTS-ready</span></p>
-    <div class="controls" aria-label="Global controls">
-      <button class="btn" id="btnLoadDefault" aria-describedby="modelHelp">Load default ONNX</button>
-      <input type="file" id="onnxFile" accept=".onnx" aria-label="Load ONNX from file"/>
-      <button class="btn secondary" id="btnUnload">Unload model</button>
-      <span id="modelHelp" class="muted">Default path: <code>B-Eye-O-Marker_CNN-V2.onnx</code></span>
-    </div>
-    <div class="controls" aria-label="Text to speech controls">
-      <label for="ttsToggle"><span class="label">TTS</span></label>
-      <select id="voiceSelect" aria-label="Choose TTS voice"></select>
-      <label for="rate">Rate</label>
-      <input id="rate" type="range" min="0.7" max="1.4" step="0.05" value="1" />
-      <label for="pitch">Pitch</label>
-      <input id="pitch" type="range" min="0.8" max="1.2" step="0.05" value="1" />
-      <button class="btn secondary" id="btnReadAll">Read all visible content</button>
-      <span class="muted">Keyboard: <span class="kbd">R</span>=Read, <span class="kbd">/</span>=Focus search</span>
-    </div>
-    <div class="notice" role="note">
-      <strong>Important:</strong> This tool is a research prototype, <span class="danger">not</span> a medical device. It does not provide medical advice. If you have symptoms or concerns, seek professional care.
-    </div>
-  </div>
-</header>
-
-<main id="main" class="wrap" role="main">
-  <section class="card" aria-labelledby="modes-h2">
-    <h2 id="modes-h2">Choose a mode</h2>
-    <div class="mode-tabs" role="tablist" aria-label="Input modes">
-      <button role="tab" id="tab-camera" aria-selected="true" aria-controls="panel-camera" class="btn secondary">Camera</button>
-      <button role="tab" id="tab-upload" aria-selected="false" aria-controls="panel-upload" class="btn secondary">Upload Photo</button>
-      <button role="tab" id="tab-manual" aria-selected="false" aria-controls="panel-manual" class="btn secondary">Manual</button>
-    </div>
-  </section>
-
-  <!-- CAMERA -->
-  <section id="panel-camera" role="tabpanel" aria-labelledby="tab-camera" class="card">
-    <h2>Camera</h2>
-    <p class="muted">Allow camera access, center your eye(s) in the frame, then capture a photo.</p>
-    <div class="grid">
-      <div class="card half">
-        <h3>Live Preview</h3>
-        <div class="row">
-          <button class="btn" id="startCam">Start camera</button>
-          <button class="btn" id="capture" disabled>Capture</button>
-          <button class="btn secondary" id="stopCam" disabled>Stop</button>
+<body data-contrast="normal">
+<a href="#main" class="sr-only">Skip to main content</a>
+<div class="container">
+  <header aria-label="Application header">
+    <div class="brand" role="img" aria-label="B-Eye-O-Marker logo">
+      <div class="logo" aria-hidden="true"></div>
+      <div>
+        <h1>B-Eye-O-Marker — CNN-V2 (BiNLOP-3)</h1>
+        <div class="kbd-row" aria-hidden="true">
+          <span class="pill">Client-side ONNX</span>
+          <span class="pill">Accessible + TTS</span>
+          <span class="pill">Camera / Upload / Manual</span>
         </div>
-        <figure>
-          <video id="video" playsinline autoplay muted width="100%" style="max-width:100%;border-radius:12px;border:1px solid var(--border)"></video>
-          <figcaption id="camStatus" class="muted" aria-live="polite">Camera off.</figcaption>
-        </figure>
-        <p class="muted">Tip: use good lighting and keep still. FPS: <span id="fps" aria-live="polite">0</span></p>
-      </div>
-      <div class="card half">
-        <h3>Captured Frame</h3>
-        <div class="row">
-          <button class="btn" id="analyzeCam" disabled>Analyze</button>
-          <button class="btn secondary" id="downloadFrame" disabled>Download frame</button>
-          <button class="btn secondary" id="speakCamera">Speak</button>
-        </div>
-        <canvas id="captureCanvas" width="384" height="384" style="width:100%;border-radius:12px;border:1px solid var(--border)"></canvas>
-        <p class="muted">Preprocess: center-crop to square → resize 384×384 → normalize [0,1].</p>
       </div>
     </div>
-  </section>
-
-  <!-- UPLOAD -->
-  <section id="panel-upload" role="tabpanel" aria-labelledby="tab-upload" class="card" hidden>
-    <h2>Upload photo</h2>
-    <div class="row">
-      <input type="file" id="fileInput" accept="image/*" aria-label="Choose an eye photo to analyze" />
-      <button class="btn" id="analyzeFile" disabled>Analyze</button>
-      <button class="btn secondary" id="speakUpload">Speak</button>
-    </div>
-    <div class="grid">
-      <div class="card half">
-        <h3>Preview</h3>
-        <img id="preview" alt="Uploaded image preview" style="max-width:100%;border-radius:12px;border:1px solid var(--border)"/>
-      </div>
-      <div class="card half">
-        <h3>Preprocessed</h3>
-        <canvas id="fileCanvas" width="384" height="384" style="width:100%;border-radius:12px;border:1px solid var(--border)"></canvas>
-      </div>
-    </div>
-  </section>
-
-  <!-- MANUAL -->
-  <section id="panel-manual" role="tabpanel" aria-labelledby="tab-manual" class="card" hidden>
-    <h2>Manual mode</h2>
-    <p class="muted">Pick a condition to view guidance without running the CNN.</p>
-    <div class="row">
-      <label for="manualSelect" class="label">Condition</label>
-      <select id="manualSelect" aria-label="Select a condition">
-        <option value="">Select…</option>
-        <option>Normal</option>
-        <option>DiabeticRetinopathy</option>
-        <option>DiabeticMacularEdema</option>
-        <option>AgeRelatedMacularDegeneration</option>
-        <option>Glaucoma</option>
-        <option>RetinalDetachment</option>
-        <option>EpiretinalMembrane</option>
-        <option>VitreousDetachment</option>
-        <option>Other</option>
+    <div class="controls" role="group" aria-label="Accessibility controls">
+      <button class="btn" id="ttsToggle" aria-pressed="false" aria-label="Toggle text to speech">🔊 TTS: Off</button>
+      <button class="btn" id="contrastToggle" aria-pressed="false" aria-label="Toggle high contrast">🌓 High Contrast</button>
+      <label class="sr-only" for="fontSize">Text size</label>
+      <select id="fontSize" aria-label="Text size">
+        <option value="16">Text: 100%</option>
+        <option value="18">Text: 112%</option>
+        <option value="20">Text: 125%</option>
+        <option value="22">Text: 138%</option>
       </select>
-      <button class="btn" id="manualShow">Show guidance</button>
-      <button class="btn secondary" id="speakManual">Speak</button>
+      <button class="btn" id="stopTTS" aria-label="Stop speech">⏹ Stop</button>
     </div>
-  </section>
+  </header>
 
-  <!-- RESULTS -->
-  <section id="results" class="card live danger-bg" aria-live="polite" aria-atomic="true">
-    <h2>Results</h2>
-    <div id="summary" class="notice" role="status">No results yet. Load model and analyze an image, or choose Manual.</div>
-    <div class="grid" aria-label="Outputs">
-      <div class="card third">
-        <h3>Top prediction</h3>
-        <p id="topPred" class="ok" style="font-weight:700">—</p>
-        <p class="muted">Confidence: <span id="topConf">—</span></p>
-        <button class="btn secondary" data-say="#topPred">Speak</button>
+  <!-- Model loader -->
+  <section class="panel" aria-labelledby="modelTitle" id="modelPanel">
+    <div class="content">
+      <div class="section-title">
+        <h2 id="modelTitle">1) Load Model</h2>
+        <button class="btn" id="readModel" aria-label="Read this section">🔊 Read</button>
       </div>
-      <div class="card third">
-        <h3>Probability distribution</h3>
-        <div class="chart-wrap">
-          <canvas id="probChart" aria-label="Probability chart" role="img"></canvas>
+      <p id="modelDesc">Load your ONNX file <strong>B-Eye-O-Marker_CNN-V2.onnx</strong>. All inference runs locally in your browser.</p>
+      <div class="controls" role="group" aria-label="Model loading">
+        <label for="modelFile">Local ONNX file</label>
+        <input type="file" id="modelFile" accept=".onnx" />
+        <span>or</span>
+        <label class="sr-only" for="modelUrl">Model URL</label>
+        <input type="text" id="modelUrl" placeholder="https://your-host/B-Eye-O-Marker_CNN-V2.onnx" size="48" />
+        <button class="btn primary" id="loadModelBtn">Load Model</button>
+        <span id="modelStatus" role="status" aria-live="polite" class="pill">Model: not loaded</span>
+      </div>
+      <div class="card">
+        <div class="flex">
+          <div class="pill" id="prov">Provider: N/A</div>
+          <div class="pill" id="opset">Opset: N/A</div>
+          <div class="pill" id="graphopt">GraphOpt: N/A</div>
+          <div class="pill" id="mem">Memory: N/A</div>
+          <div class="pill" id="lat">Last infer: N/A</div>
+          <div class="right pill">Threshold: <span id="thrVal">0.50</span></div>
         </div>
-        <details>
-          <summary>Open accessible table</summary>
-          <div id="probTableWrap" aria-live="polite"></div>
-        </details>
-        <button class="btn secondary" data-say="#probTableWrap">Speak</button>
+        <input type="range" min="0" max="100" value="50" id="thr" class="wide" aria-label="Threshold slider for multi-label decisions" />
       </div>
-      <div class="card third">
-        <h3>Metrics</h3>
-        <ul>
-          <li>Preprocess: <span id="mPre">—</span> ms</li>
-          <li>Inference: <span id="mInf">—</span> ms</li>
-          <li>Total: <span id="mTot">—</span> ms</li>
-          <li>Backend: <span id="backend">—</span></li>
-          <li>Input: <span id="inShape">—</span></li>
-        </ul>
-        <div class="row">
-          <button class="btn secondary" id="btnSpeakMetrics">Speak</button>
-          <button class="btn" id="btnExport">Download JSON report</button>
+    </div>
+  </section>
+
+  <!-- Modes -->
+  <section class="panel" aria-labelledby="modesTitle">
+    <div class="content">
+      <div class="section-title">
+        <h2 id="modesTitle">2) Choose Mode</h2>
+        <button class="btn" id="readModes" aria-label="Read this section">🔊 Read</button>
+      </div>
+      <nav class="tabs" role="tablist" aria-label="Input mode tabs">
+        <button class="tab" role="tab" id="tabCamera" aria-selected="true" aria-controls="panelCamera">📷 Camera</button>
+        <button class="tab" role="tab" id="tabUpload" aria-selected="false" aria-controls="panelUpload">🖼️ Upload Photo</button>
+        <button class="tab" role="tab" id="tabManual" aria-selected="false" aria-controls="panelManual">✍️ Manual</button>
+      </nav>
+
+      <!-- Camera -->
+      <div id="panelCamera" role="tabpanel" aria-labelledby="tabCamera">
+        <div class="grid cols-2">
+          <div>
+            <label for="cameraSelect">Camera device</label>
+            <select id="cameraSelect" aria-label="Choose camera"></select>
+            <video id="video" class="video" autoplay playsinline muted aria-label="Camera preview"></video>
+            <div class="controls">
+              <button class="btn" id="startCam">Start Camera</button>
+              <button class="btn" id="snap">Take Picture</button>
+              <button class="btn" id="analyzeCam">Analyze</button>
+              <button class="btn warn" id="stopCam">Stop Camera</button>
+            </div>
+          </div>
+          <div>
+            <canvas id="canvasCam" class="img-preview" aria-label="Captured image preview" role="img"></canvas>
+            <div class="card">
+              <p>Tip: good lighting, hold steady, center the eye. Avoid reflections and motion blur.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Upload -->
+      <div id="panelUpload" role="tabpanel" aria-labelledby="tabUpload" hidden>
+        <div class="grid cols-2">
+          <div>
+            <label for="imgFile">Choose image</label>
+            <input type="file" id="imgFile" accept="image/*" />
+            <div class="controls">
+              <button class="btn" id="analyzeUpload">Analyze</button>
+            </div>
+          </div>
+          <div>
+            <img id="imgPreview" class="img-preview" alt="Uploaded image preview" />
+          </div>
+        </div>
+      </div>
+      <!-- Manual -->
+      <div id="panelManual" role="tabpanel" aria-labelledby="tabManual" hidden>
+        <div class="grid cols-2">
+          <div>
+            <label for="manualSelect">Select your condition (manual mode)</label>
+            <select id="manualSelect" aria-label="Manual condition select">
+              <option value="">-- Choose a condition --</option>
+            </select>
+            <div class="controls">
+              <button class="btn primary" id="manualExplain">Explain & Recommendations</button>
+            </div>
+          </div>
+          <div class="card">
+            <p>This mode does not run the CNN. It provides educational guidance based on your selection.</p>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- GUIDANCE -->
-  <section id="guidance" class="card" aria-labelledby="guidance-h2">
-    <h2 id="guidance-h2">Recommendations & overview</h2>
-    <article id="guidanceText">
-      <p class="muted">You’ll see tailored recommendations here after a result (or via Manual mode). This section is fully TTS compatible.</p>
-    </article>
-    <div class="row">
-      <button class="btn secondary" id="btnSpeakGuidance">Speak</button>
+  <!-- Results -->
+  <main id="main" class="panel" aria-labelledby="resultsTitle">
+    <div class="content">
+      <div class="section-title">
+        <h2 id="resultsTitle">3) Results & Insights</h2>
+        <button class="btn" id="readResults" aria-label="Read this section">🔊 Read</button>
+      </div>
+
+      <!-- Summary -->
+      <section aria-labelledby="summaryTitle" class="card">
+        <div class="flex">
+          <h3 id="summaryTitle" style="margin:0">Summary</h3>
+          <button class="btn" id="readSummary" aria-label="Read summary">🔊 Read</button>
+        </div>
+        <div class="grid cols-3">
+          <div class="vis">
+            <p><strong>Top-1 class:</strong> <span id="topClass">—</span></p>
+            <div class="meter" aria-label="Top confidence meter"><span id="confMeter" style="width:0%"></span></div>
+            <p><strong>Confidence:</strong> <span id="topConf">—</span></p>
+            <p><strong>Above threshold (multi-label):</strong> <span id="aboveThr">—</span></p>
+          </div>
+          <div class="vis">
+            <p><strong>Entropy (lower = certain):</strong> <span id="entropy">—</span></p>
+            <p><strong>Top-1 vs Top-2 gap:</strong> <span id="margin">—</span></p>
+            <p><strong>Latency:</strong> <span id="latency">—</span></p>
+            <p><strong>Provider:</strong> <span id="providerName">—</span></p>
+          </div>
+          <div class="vis">
+            <p><strong>Image:</strong> <span id="imgInfo">—</span></p>
+            <p><strong>Threshold:</strong> <span id="thrSummary">0.50</span></p>
+            <p class="warning"><strong>Important:</strong> This is not a medical device. Not for diagnosis. Consult an eye-care professional.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Probabilities -->
+      <section aria-labelledby="probsTitle" class="card">
+        <div class="flex">
+          <h3 id="probsTitle" style="margin:0">Probability Distribution</h3>
+          <button class="btn" id="readProbs" aria-label="Read probabilities">🔊 Read</button>
+        </div>
+        <div class="grid cols-2">
+          <div class="chart-wrap">
+            <canvas id="probChart" aria-label="Probability bar chart"></canvas>
+          </div>
+          <div>
+            <table aria-label="Probabilities table" id="probTable">
+              <thead><tr><th scope="col">Class</th><th scope="col">Probability</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Recommendations & Overview -->
+      <section aria-labelledby="recsTitle" class="card">
+        <div class="flex">
+          <h3 id="recsTitle" style="margin:0">Recommendations & Deep Overview</h3>
+          <button class="btn" id="readRecs" aria-label="Read recommendations">🔊 Read</button>
+        </div>
+        <div id="recsBody"></div>
+      </section>
+
+      <!-- Live region for announcements -->
+      <div id="live" class="live" aria-live="polite" aria-atomic="true"></div>
     </div>
-  </section>
+  </main>
 
-  <section class="footer" role="contentinfo">
-    <p>Privacy: All images and inference run locally in your browser. No uploads.</p>
-    <p>Medical disclaimer: This interface is for information only and is not a substitute for professional diagnosis or treatment.</p>
-  </section>
-</main>
-
-<!-- Dependencies (CDN). If blocked, you can run without charts; core works without them. -->
-<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <footer>
+    <div class="panel">
+      <div class="content">
+        <p><strong>Safety:</strong> Educational demo only. Not medical advice. If you have symptoms or concerns, seek professional evaluation promptly.</p>
+      </div>
+    </div>
+  </footer>
+</div>
 
 <script>
-/* ========================= Config & globals ========================= */
-const DEFAULT_MODEL = "B-Eye-O-Marker_CNN-V2.onnx";
-const LABELS = [
+/* ========================= GLOBALS & ACCESSIBILITY ========================= */
+const CLASSES = [
   "Normal","DiabeticRetinopathy","DiabeticMacularEdema","AgeRelatedMacularDegeneration",
   "Glaucoma","RetinalDetachment","EpiretinalMembrane","VitreousDetachment","Other"
 ];
-const IMG_SIZE = 384; const INPUT_CH = 3;
-let session = null; let backendName = "—"; let probChart = null;
-let voices = []; const ttsState = { rate: 1.0, pitch: 1.0, voice: null };
-
-/* ========================= Accessibility: TTS ========================= */
-function populateVoices(){
-  voices = window.speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith("en"));
-  const sel = document.getElementById("voiceSelect");
-  sel.innerHTML = "";
-  voices.forEach((v, i) => {
-    const opt = document.createElement("option");
-    opt.value = i; opt.textContent = `${v.name} (${v.lang})${v.default ? " — default":""}`;
-    sel.appendChild(opt);
-  });
-  if(voices.length) { sel.selectedIndex = 0; ttsState.voice = voices[0]; }
-}
-window.speechSynthesis.onvoiceschanged = populateVoices;
-document.addEventListener("DOMContentLoaded", populateVoices);
-
-function speak(text){
-  if(!('speechSynthesis' in window)) return;
-  const u = new SpeechSynthesisUtterance(text);
-  if(ttsState.voice) u.voice = ttsState.voice;
-  u.rate = ttsState.rate; u.pitch = ttsState.pitch;
-  window.speechSynthesis.cancel(); // ensure fresh
-  window.speechSynthesis.speak(u);
-}
-function speakEl(selector){
-  const el = typeof selector==="string" ? document.querySelector(selector) : selector;
-  if(!el) return;
-  // Gather visible text including table cells
-  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
-  let txt = "";
-  while(walker.nextNode()){ const t = walker.currentNode.nodeValue.trim(); if(t) txt += t + " "; }
-  speak(txt);
-}
-document.getElementById("voiceSelect").addEventListener("change", e=>{
-  const idx = parseInt(e.target.value||"0",10); ttsState.voice = voices[idx] || null;
-});
-document.getElementById("rate").addEventListener("input", e=> ttsState.rate = parseFloat(e.target.value));
-document.getElementById("pitch").addEventListener("input", e=> ttsState.pitch = parseFloat(e.target.value));
-document.getElementById("btnReadAll").addEventListener("click", ()=>{
-  const main = document.getElementById("main"); speakEl(main);
-});
-document.addEventListener("keydown", e=>{
-  if(e.key==="r" || e.key==="R"){ e.preventDefault(); speakEl("#results"); }
-  if(e.key==="/"){ e.preventDefault(); (document.querySelector("input[type='file']")||document.body).focus(); }
-});
-
-/* ========================= UI Tabs ========================= */
-const tabs = [
-  {tab:"#tab-camera", panel:"#panel-camera"},
-  {tab:"#tab-upload", panel:"#panel-upload"},
-  {tab:"#tab-manual", panel:"#panel-manual"}
-];
-tabs.forEach(({tab,panel})=>{
-  document.querySelector(tab).addEventListener("click", ()=>{
-    tabs.forEach(({tab:t,panel:p})=>{
-      document.querySelector(t).setAttribute("aria-selected", t===tab ? "true":"false");
-      document.querySelector(p).hidden = p!==panel;
-    });
-  });
-});
-
-/* ========================= Utility: images & preprocessing ========================= */
-function drawSquareToCanvas(img, canvas){
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  const size = Math.min(img.naturalWidth||img.videoWidth, img.naturalHeight||img.videoHeight);
-  const sx = ((img.naturalWidth||img.videoWidth) - size)/2;
-  const sy = ((img.naturalHeight||img.videoHeight) - size)/2;
-  canvas.width = IMG_SIZE; canvas.height = IMG_SIZE;
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.drawImage(img, sx, sy, size, size, 0, 0, IMG_SIZE, IMG_SIZE);
-}
-function tensorFromCanvas(canvas){
-  // Canvas RGBA → Float32 CHW in [0,1]
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  const { data } = ctx.getImageData(0,0,canvas.width,canvas.height);
-  const W = canvas.width, H = canvas.height;
-  const out = new Float32Array(1 * INPUT_CH * H * W);
-  // CHW order
-  let rOfs = 0, gOfs = H*W, bOfs = 2*H*W;
-  for(let y=0;y<H;y++){
-    for(let x=0;x<W;x++){
-      const idx = (y*W + x)*4;
-      const r = data[idx]/255, g = data[idx+1]/255, b = data[idx+2]/255;
-      const i = y*W + x;
-      out[rOfs + i] = r; out[gOfs + i] = g; out[bOfs + i] = b;
-    }
-  }
-  return out;
-}
-function sigmoid(x){ return 1/(1+Math.exp(-x)); }
-
-/* ========================= Model load / unload ========================= */
-async function loadDefaultModel(){
-  try{
-    announce("Loading default ONNX model…");
-    session = await ort.InferenceSession.create(DEFAULT_MODEL, {
-      executionProviders: ['webgl','wasm'], // prefer WebGL, fallback to WASM
-      graphOptimizationLevel: "all"
-    });
-    backendName = (await session.executionProvider).toString();
-    document.getElementById("backend").textContent = backendName;
-    announce("Model loaded.");
-  }catch(err){
-    console.warn(err);
-    alert("Could not fetch default ONNX (CORS or missing file). Use 'Load ONNX from file'.");
-  }
-}
-async function loadFromFile(file){
-  const buf = await file.arrayBuffer();
-  session = await ort.InferenceSession.create(buf, { executionProviders: ['webgl','wasm'], graphOptimizationLevel: "all" });
-  backendName = (await session.executionProvider).toString();
-  document.getElementById("backend").textContent = backendName;
-  announce("Model loaded from file.");
-}
-function unloadModel(){
-  session = null;
-  document.getElementById("backend").textContent = "—";
-  announce("Model unloaded.");
-}
-document.getElementById("btnLoadDefault").addEventListener("click", loadDefaultModel);
-document.getElementById("onnxFile").addEventListener("change", e=>{
-  const f = e.target.files?.[0]; if(f) loadFromFile(f);
-});
-document.getElementById("btnUnload").addEventListener("click", unloadModel);
-
-/* ========================= Results UI helpers ========================= */
-function announce(s){
-  const sum = document.getElementById("summary");
-  sum.textContent = s;
-  speak(s); // always SR-friendly
-}
-function updateProbChart(probs){
-  const ctx = document.getElementById("probChart").getContext("2d");
-  const data = { labels: LABELS, datasets: [{ label:"Probability", data: probs.map(v=>+v.toFixed(4)) }]};
-  const opts = { responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, max:1 }}, plugins:{ legend:{ display:false }, tooltip:{ enabled:true }}, animation:{ duration:300 } };
-  if(probChart){ probChart.data = data; probChart.update(); }
-  else { probChart = new Chart(ctx, { type:"bar", data, options:opts }); }
-  // Accessible table mirror
-  const wrap = document.getElementById("probTableWrap");
-  const table = document.createElement("table"); table.setAttribute("aria-label","Probability table");
-  const thead = document.createElement("thead"); const trh = document.createElement("tr");
-  ["Condition","Probability"].forEach(h=>{ const th=document.createElement("th"); th.textContent=h; trh.appendChild(th); });
-  thead.appendChild(trh);
-  const tbody = document.createElement("tbody");
-  LABELS.forEach((lab,i)=>{
-    const tr = document.createElement("tr");
-    const td1 = document.createElement("td"); td1.textContent = lab;
-    const td2 = document.createElement("td"); td2.textContent = probs[i].toFixed(4);
-    tr.append(td1,td2); tbody.appendChild(tr);
-  });
-  table.append(thead,tbody);
-  wrap.innerHTML=""; wrap.appendChild(table);
-}
-function showBars(probs){
-  const topIdx = probs.reduce((bi, v, i)=> v > probs[bi] ? i : bi, 0);
-  document.getElementById("topPred").textContent = LABELS[topIdx];
-  document.getElementById("topConf").textContent = (probs[topIdx]*100).toFixed(2)+"%";
-}
-
-/* ========================= Guidance (condition-specific) ========================= */
-const GUIDANCE = {
+// Educational summaries + tips (kept concise for TTS; expanded in UI):
+const EXPLAINS = {
   "Normal": {
-    summary: "No clear signs of listed pathologies detected.",
-    actions: [
-      "Maintain regular eye exams per your optometrist’s schedule.",
-      "Protect eyes from UV using sunglasses.",
-      "Manage systemic risks (blood pressure, glucose, lipids)."
-    ],
-    notes: "If you have symptoms (sudden floaters, flashes, vision loss), seek care urgently regardless of this screening."
+    overview: "No strong signals of disease in this image. This does not exclude early or subtle disease.",
+    tips: ["Maintain routine eye exams.","Manage blood pressure, blood sugar, and cholesterol.","Use protective eyewear and take screen breaks."]
   },
   "DiabeticRetinopathy": {
-    summary: "Signs suggestive of diabetic retinopathy (DR).",
-    actions: [
-      "Schedule a dilated retinal exam with an ophthalmologist.",
-      "Tighten glucose control (HbA1c target individualized).",
-      "Discuss blood pressure & lipid management with your clinician."
-    ],
-    notes: "Treatment ranges from observation to anti-VEGF injections or laser, depending on severity."
+    overview: "Findings consistent with diabetic retinopathy risk. Microvascular changes may impact retina.",
+    tips: ["Optimize blood glucose, blood pressure, and lipids.","Schedule a comprehensive dilated eye exam.","Report any sudden vision changes immediately."]
   },
   "DiabeticMacularEdema": {
-    summary: "Features may indicate diabetic macular edema (DME).",
-    actions: [
-      "Prompt evaluation by a retina specialist is recommended.",
-      "Discuss anti-VEGF or steroid options; systemic control remains critical."
-    ],
-    notes: "Macular edema risks central vision—timely treatment matters."
+    overview: "Signals suggest possible macular edema related to diabetes; can reduce central vision.",
+    tips: ["Urgent clinical assessment is recommended.","Manage systemic risk factors.","Discuss anti-VEGF or laser options with a specialist."]
   },
   "AgeRelatedMacularDegeneration": {
-    summary: "Possible age-related macular degeneration (AMD).",
-    actions: [
-      "Arrange OCT and dilated exam; consider AREDS2 vitamins (non-smokers) if intermediate AMD.",
-      "Avoid smoking; monitor with an Amsler grid; ensure blue-light/UV protection."
-    ],
-    notes: "Wet AMD may need urgent anti-VEGF; dry AMD needs risk control and monitoring."
+    overview: "Features may align with AMD, which affects central vision via macula.",
+    tips: ["Consult on AREDS supplements if appropriate.","Avoid smoking; use UV protection.","Monitor central vision (Amsler grid) and seek care if changes arise."]
   },
   "Glaucoma": {
-    summary: "Findings may be consistent with glaucoma risk.",
-    actions: [
-      "Comprehensive glaucoma workup (IOP, pachymetry, gonioscopy, RNFL OCT, visual fields).",
-      "Adherence to drops if prescribed; discuss target pressures."
-    ],
-    notes: "Glaucoma is usually asymptomatic until late—follow-up is vital."
+    overview: "Possible optic nerve or intraocular pressure related risk. Typically requires longitudinal assessment.",
+    tips: ["Schedule professional evaluation including pressure and visual fields.","Adhere to prescribed drops if applicable.","Discuss family history."]
   },
   "RetinalDetachment": {
-    summary: "Possible retinal detachment risk pattern.",
-    actions: [
-      "This can be vision-threatening—seek same-day evaluation if symptomatic.",
-      "Avoid strenuous activity until cleared by a clinician."
-    ],
-    notes: "Symptoms include curtain-like shadow, flashes, sudden floaters."
+    overview: "Concerning for retinal detachment risk which can threaten vision.",
+    tips: ["This warrants urgent, same-day clinical evaluation.","Avoid strenuous activity until cleared.","Note flashes, floaters, or a curtain over vision."]
   },
   "EpiretinalMembrane": {
-    summary: "Potential epiretinal membrane (ERM).",
-    actions: [
-      "Schedule evaluation; mild cases may be observed, significant distortion may need surgery.",
-      "Track visual distortion (Amsler) and symptoms."
-    ],
-    notes: "Surgical peeling is considered if function is impacted."
+    overview: "A membrane on the retinal surface may cause distortion.",
+    tips: ["Clinical confirmation recommended.","Discuss observation vs peeling surgery depending on symptoms.","Monitor distortion and visual acuity."]
   },
   "VitreousDetachment": {
-    summary: "Possible posterior vitreous detachment.",
-    actions: [
-      "If new onset floaters/flashes, rule out retinal tears; otherwise observe.",
-      "Return sooner for any sudden symptom change."
-    ],
-    notes: "Most PVD is benign but can be associated with retinal breaks."
+    overview: "Age-related gel separation can cause floaters or flashes.",
+    tips: ["Rule out retinal tear with a clinician if symptomatic.","Follow return precautions if new symptoms occur.","Use protective behavior until cleared."]
   },
   "Other": {
-    summary: "Uncategorized or unclear pattern.",
-    actions: [
-      "Obtain clinician assessment to refine diagnosis.",
-      "Ensure high-quality imaging and history are reviewed."
-    ],
-    notes: "Model outputs are limited by image quality and scope of training."
+    overview: "The pattern does not map cleanly to known classes here.",
+    tips: ["Request professional evaluation for tailored diagnosis.","Provide high-quality images or clinical history.","Consider alternate imaging modalities."]
   }
 };
-function renderGuidance(label){
-  const g = GUIDANCE[label] || GUIDANCE["Other"];
-  const el = document.getElementById("guidanceText");
-  el.innerHTML = `
-    <h3>${label}</h3>
-    <p><strong>Summary:</strong> ${g.summary}</p>
-    <ul>${g.actions.map(a=>`<li>${a}</li>`).join("")}</ul>
-    <p class="muted"><strong>Notes:</strong> ${g.notes}</p>
+
+// TTS
+let TTS_ENABLED = false;
+const speak = (text) => {
+  if (!TTS_ENABLED) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 1.0; u.pitch = 1.0; u.volume = 1.0;
+  window.speechSynthesis.speak(u);
+};
+const stopSpeak = () => window.speechSynthesis.cancel();
+const live = (msg) => { const el = document.getElementById('live'); el.textContent = msg; if (TTS_ENABLED) speak(msg); };
+
+/* =============================== UI CONTROLS =============================== */
+const ttsToggle = document.getElementById('ttsToggle');
+ttsToggle.addEventListener('click', () => {
+  TTS_ENABLED = !TTS_ENABLED;
+  ttsToggle.setAttribute('aria-pressed', String(TTS_ENABLED));
+  ttsToggle.textContent = TTS_ENABLED ? "🔊 TTS: On" : "🔊 TTS: Off";
+  live(`Text to speech ${TTS_ENABLED ? 'enabled' : 'disabled'}.`);
+});
+document.getElementById('stopTTS').addEventListener('click', stopSpeak);
+
+document.getElementById('contrastToggle').addEventListener('click', (e) => {
+  const cur = document.body.getAttribute('data-contrast');
+  const next = cur === 'high' ? 'normal' : 'high';
+  document.body.setAttribute('data-contrast', next);
+  e.currentTarget.setAttribute('aria-pressed', String(next === 'high'));
+  live(`High contrast ${next === 'high' ? 'enabled' : 'disabled'}.`);
+});
+document.getElementById('fontSize').addEventListener('change', (e) => {
+  document.body.style.fontSize = e.target.value + 'px';
+  live(`Font size set to ${e.target.selectedOptions[0].textContent}.`);
+});
+
+// Section read buttons
+const readBtns = [
+  ["readModel","modelPanel"],
+  ["readModes","modesTitle"],
+  ["readResults","resultsTitle"],
+  ["readSummary","summaryTitle"],
+  ["readProbs","probsTitle"],
+  ["readRecs","recsTitle"]
+];
+readBtns.forEach(([btnId, tgtId]) => {
+  const btn = document.getElementById(btnId);
+  btn.addEventListener('click', () => {
+    const node = document.getElementById(tgtId);
+    let txt = "";
+    if (node) {
+      if (node.closest('.panel')) txt = node.closest('.panel').innerText;
+      else txt = node.innerText;
+    }
+    speak(txt);
+  });
+});
+
+/* =============================== TABS / MODES ============================== */
+const tabs = [
+  {tab:"tabCamera", panel:"panelCamera"},
+  {tab:"tabUpload", panel:"panelUpload"},
+  {tab:"tabManual", panel:"panelManual"},
+];
+tabs.forEach(({tab,panel})=>{
+  const t = document.getElementById(tab);
+  const p = document.getElementById(panel);
+  t.addEventListener('click', ()=>{
+    tabs.forEach(({tab:tb,panel:pn})=>{
+      document.getElementById(tb).setAttribute('aria-selected', String(tb===tab));
+      const el = document.getElementById(pn);
+      if (pn===panel) el.removeAttribute('hidden'); else el.setAttribute('hidden','');
+    });
+    live(`${t.textContent.trim()} mode selected.`);
+  });
+});
+
+/* ============================== MODEL LOADING ============================== */
+const thr = document.getElementById('thr');
+const thrVal = document.getElementById('thrVal');
+const thrSummary = document.getElementById('thrSummary');
+thr.addEventListener('input', ()=>{
+  const v = (thr.valueAsNumber/100).toFixed(2);
+  thrVal.textContent = v; thrSummary.textContent = v;
+});
+
+let session = null;
+let provider = 'wasm';
+const modelStatus = document.getElementById('modelStatus');
+const provElm = document.getElementById('prov'), opsetElm = document.getElementById('opset'), graphElm = document.getElementById('graphopt');
+
+async function loadModelFromBuffer(arrayBuffer){
+  modelStatus.textContent = "Loading model…";
+  const t0 = performance.now();
+  // Prefer WASM for compatibility; ORT auto-detects SIMD/threads.
+  const options = {
+    executionProviders: ['wasm'], // you can add 'webgl' if desired
+    graphOptimizationLevel: 'all'
+  };
+  session = await ort.InferenceSession.create(arrayBuffer, options);
+  provider = session.executionProvider || 'wasm';
+  const dt = (performance.now()-t0).toFixed(0);
+  modelStatus.textContent = "Model: loaded";
+  provElm.textContent = `Provider: ${provider}`;
+  graphElm.textContent = `GraphOpt: all`;
+  // Opset cannot be directly read; leave N/A unless we parse the model
+  opsetElm.textContent = `Opset: —`;
+  live(`Model loaded in ${dt} milliseconds using ${provider}.`);
+}
+
+document.getElementById('loadModelBtn').addEventListener('click', async ()=>{
+  try{
+    const fileInput = document.getElementById('modelFile');
+    const urlInput = document.getElementById('modelUrl').value.trim();
+    if (fileInput.files && fileInput.files[0]){
+      const buf = await fileInput.files[0].arrayBuffer();
+      await loadModelFromBuffer(buf);
+    } else if (urlInput){
+      const res = await fetch(urlInput);
+      if(!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+      const buf = await res.arrayBuffer();
+      await loadModelFromBuffer(buf);
+    } else {
+      alert("Select a local ONNX file or enter a URL.");
+    }
+  }catch(err){
+    console.error(err);
+    modelStatus.textContent = "Model: error";
+    live("Model load failed.");
+    alert("Model load failed: " + err.message);
+  }
+});
+
+/* =============================== CAMERA MODE ================================ */
+const video = document.getElementById('video');
+const canvasCam = document.getElementById('canvasCam');
+const ctxCam = canvasCam.getContext('2d');
+const cameraSelect = document.getElementById('cameraSelect');
+let stream = null;
+
+async function listCameras(){
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  const cams = devices.filter(d=>d.kind==='videoinput');
+  cameraSelect.innerHTML = '';
+  cams.forEach((c, i)=>{
+    const opt = document.createElement('option');
+    opt.value = c.deviceId; opt.textContent = c.label || `Camera ${i+1}`;
+    cameraSelect.appendChild(opt);
+  });
+}
+async function startCamera(){
+  try{
+    if (stream){ stream.getTracks().forEach(t=>t.stop()); }
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { deviceId: cameraSelect.value ? {exact: cameraSelect.value} : undefined, width:1280, height:720 }
+    });
+    video.srcObject = stream;
+    live("Camera started.");
+  }catch(err){
+    alert("Camera error: " + err.message);
+  }
+}
+document.getElementById('startCam').addEventListener('click', startCamera);
+document.getElementById('stopCam').addEventListener('click', ()=>{
+  if (stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; live("Camera stopped."); }
+});
+document.getElementById('snap').addEventListener('click', ()=>{
+  if (!video.videoWidth){ alert("Camera not ready."); return; }
+  canvasCam.width = video.videoWidth; canvasCam.height = video.videoHeight;
+  ctxCam.drawImage(video, 0, 0);
+  live("Image captured from camera.");
+});
+navigator.mediaDevices?.getUserMedia && listCameras().catch(()=>{});
+
+/* =============================== UPLOAD MODE ================================ */
+const imgFile = document.getElementById('imgFile');
+const imgPreview = document.getElementById('imgPreview');
+imgFile.addEventListener('change', ()=>{
+  const f = imgFile.files?.[0]; if (!f) return;
+  const url = URL.createObjectURL(f);
+  imgPreview.src = url;
+  imgPreview.onload = ()=> URL.revokeObjectURL(url);
+  live("Image selected for upload.");
+});
+
+/* ============================ MANUAL MODE (TTS) ============================= */
+const manualSelect = document.getElementById('manualSelect');
+CLASSES.forEach(c=>{
+  const o = document.createElement('option'); o.value=c; o.textContent=c; manualSelect.appendChild(o);
+});
+document.getElementById('manualExplain').addEventListener('click', ()=>{
+  const v = manualSelect.value;
+  if (!v){ alert("Select a condition first."); return; }
+  renderResultsFromManual(v);
+});
+
+/* ============================ PREPROCESS / INFER ============================ */
+// The training used: Resize(384,384), ToTensor(), no normalization → scale to [0,1].
+const TARGET = 384;
+function preprocessImageToTensor(img){
+  // Stretch to 384x384 (matches training Resize; no aspect preservation)
+  const off = document.createElement('canvas');
+  off.width = TARGET; off.height = TARGET;
+  const ictx = off.getContext('2d');
+  ictx.drawImage(img, 0, 0, TARGET, TARGET);
+  const {data} = ictx.getImageData(0,0,TARGET,TARGET);
+  // NCHW float32
+  const chw = new Float32Array(3 * TARGET * TARGET);
+  let p = 0;
+  const stride = TARGET * TARGET;
+  for (let i=0;i<data.length;i+=4){
+    const r = data[i]   / 255.0;
+    const g = data[i+1] / 255.0;
+    const b = data[i+2] / 255.0;
+    const idx = i>>2;
+    chw[idx] = r;
+    chw[idx + stride] = g;
+    chw[idx + 2*stride] = b;
+    p++;
+  }
+  const tensor = new ort.Tensor('float32', chw, [1,3,TARGET,TARGET]);
+  return {tensor, info:`${img.naturalWidth||img.width}×${img.naturalHeight||img.height} → 384×384`};
+}
+function sigmoid(x){ return 1/(1+Math.exp(-x)); }
+function softmax(arr){
+  const m = Math.max(...arr); const exps = arr.map(v=>Math.exp(v-m));
+  const s = exps.reduce((a,b)=>a+b,0); return exps.map(v=>v/s);
+}
+function entropy(probs){ // Shannon entropy (base e)
+  let e=0; for(const p of probs){ const q=Math.min(Math.max(p,1e-9),1-1e-9); e += -q*Math.log(q) - (1-q)*Math.log(1-q); }
+  return e;
+}
+function topK(arr, k=2){
+  const idx = arr.map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]).slice(0,k);
+  return idx;
+}
+
+let lastLatency = null;
+
+async function runInferenceFromCanvas(){
+  if (!session){ alert("Load the model first."); return; }
+  // create an Image object from canvas
+  const img = new Image();
+  img.src = canvasCam.toDataURL('image/png');
+  await img.decode();
+  const {tensor, info} = preprocessImageToTensor(img);
+  return await runModel(tensor, info);
+}
+async function runInferenceFromUpload(){
+  if (!session){ alert("Load the model first."); return; }
+  if (!imgPreview.src){ alert("Upload an image first."); return; }
+  const img = imgPreview;
+  const {tensor, info} = preprocessImageToTensor(img);
+  return await runModel(tensor, info);
+}
+
+async function runModel(tensor, info){
+  const t0 = performance.now();
+  const feeds = { "input": tensor };
+  const outputs = await session.run(feeds);
+  const t1 = performance.now();
+  lastLatency = (t1 - t0).toFixed(1) + " ms";
+  document.getElementById('lat').textContent = `Last infer: ${lastLatency}`;
+  document.getElementById('latency').textContent = lastLatency;
+  document.getElementById('providerName').textContent = provider;
+  if (performance && performance.memory){
+    const gb = (performance.memory.usedJSHeapSize/(1024**3)).toFixed(2) + " GB";
+    document.getElementById('mem').textContent = "Memory: " + gb;
+  }
+
+  // Expect output named "logits"
+  const outName = Object.keys(outputs)[0];
+  const logits = outputs[outName].data;
+  // Multi-label → sigmoid per class
+  const probs = Array.from(logits, v=>sigmoid(v));
+  renderResultsFromProbs(probs, info);
+  return probs;
+}
+
+document.getElementById('analyzeCam').addEventListener('click', async ()=>{
+  const probs = await runInferenceFromCanvas().catch(err => alert("Inference error: "+err.message));
+});
+document.getElementById('analyzeUpload').addEventListener('click', async ()=>{
+  const probs = await runInferenceFromUpload().catch(err => alert("Inference error: "+err.message));
+});
+
+/* ============================== RENDER RESULTS ============================== */
+let chart = null;
+function ensureChart(ctx){
+  if (chart){ chart.destroy(); chart=null; }
+  chart = new Chart(ctx, {
+    type:'bar',
+    data:{ labels: CLASSES, datasets: [{ label:'Probability', data: new Array(CLASSES.length).fill(0) }]},
+    options:{
+      animation:{ duration: 300 },
+      responsive:true,
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:(c)=> `${c.raw.toFixed(3)}` } } },
+      scales:{
+        y:{ min:0, max:1, grid:{color:'#1b2345'}, ticks:{ color:'#cfe2ff' } },
+        x:{ grid:{display:false}, ticks:{ color:'#cfe2ff', maxRotation:60, minRotation:0 } }
+      }
+    }
+  });
+  return chart;
+}
+
+function renderResultsFromManual(cls){
+  const probs = CLASSES.map(c => c===cls ? 0.95 : 0.05/(CLASSES.length-1));
+  renderResultsFromProbs(probs, "manual");
+}
+
+function renderResultsFromProbs(probs, imgInfo){
+  // Update chart and table
+  const ctx = document.getElementById('probChart').getContext('2d');
+  ensureChart(ctx);
+  chart.data.datasets[0].data = probs;
+  chart.update();
+
+  const tb = document.getElementById('probTable').querySelector('tbody');
+  tb.innerHTML = '';
+  probs.forEach((p,i)=>{
+    const tr = document.createElement('tr');
+    const td1 = document.createElement('td'); td1.textContent = CLASSES[i]; tr.appendChild(td1);
+    const td2 = document.createElement('td'); td2.textContent = (p*100).toFixed(2) + "%"; tr.appendChild(td2);
+    tb.appendChild(tr);
+  });
+
+  const thrVal = Number(document.getElementById('thr').value)/100;
+  const top = topK(probs,2);
+  const topIdx = top[0][1], topP = top[0][0], secondP = top[1][0];
+  const over = probs.map((p,i)=> p>=thrVal ? CLASSES[i] : null).filter(Boolean);
+
+  document.getElementById('topClass').textContent = `${CLASSES[topIdx]}`;
+  document.getElementById('topConf').textContent = (topP*100).toFixed(2) + "%";
+  document.getElementById('confMeter').style.width = Math.round(topP*100)+'%';
+  document.getElementById('aboveThr').textContent = over.length ? over.join(", ") : "None";
+  const H = entropy(probs);
+  document.getElementById('entropy').textContent = H.toFixed(3);
+  document.getElementById('margin').textContent = (topP - secondP).toFixed(3);
+  document.getElementById('thrSummary').textContent = thrVal.toFixed(2);
+  document.getElementById('imgInfo').textContent = imgInfo || "—";
+
+  // Recommendations & Overview
+  const cls = CLASSES[topIdx];
+  renderRecs(cls, probs, over, thrVal);
+
+  // Announce
+  live(`Analysis complete. Top class ${cls} with ${(topP*100).toFixed(1)} percent. ${over.length} classes above threshold.`);
+}
+
+function renderRecs(cls, probs, over, thrVal){
+  const div = document.getElementById('recsBody');
+  const explain = EXPLAINS[cls] || EXPLAINS["Other"];
+  const list = explain.tips.map(t=>`<li>${t}</li>`).join("");
+  const tableRows = CLASSES.map((c,i)=>`<tr><td>${c}</td><td>${(probs[i]*100).toFixed(2)}%</td><td>${probs[i] >= thrVal ? "✓" : "—"}</td></tr>`).join("");
+
+  div.innerHTML = `
+    <article aria-label="Detailed recommendations and overview">
+      <p><strong>Class focus:</strong> ${cls}</p>
+      <p><strong>Overview:</strong> ${explain.overview}</p>
+      <p><strong>General guidance:</strong></p>
+      <ul>${list}</ul>
+      <details>
+        <summary>Show full probability table</summary>
+        <table aria-label="Full probability table with threshold flags">
+          <thead><tr><th>Class</th><th>Probability</th><th>Above threshold?</th></tr></thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      </details>
+      <p class="warning"><strong>Disclaimer:</strong> This demo is for education only. It does not diagnose conditions. Always seek professional evaluation for symptoms, screening, or treatment decisions.</p>
+    </article>
   `;
 }
 
-/* ========================= Inference ========================= */
-async function runInferenceFromCanvas(canvas){
-  if(!session){ announce("Load a model first."); return; }
-  const t0 = performance.now();
-  const inputData = tensorFromCanvas(canvas);
-  const pre = performance.now() - t0;
+/* =========================== BUTTON BINDINGS ================================ */
+document.getElementById('readModel').addEventListener('click', ()=> speak(document.getElementById('modelPanel').innerText));
+document.getElementById('readModes').addEventListener('click', ()=> speak(document.getElementById('modesTitle').closest('.panel').innerText));
+document.getElementById('readResults').addEventListener('click', ()=> speak(document.getElementById('main').innerText));
 
-  const W = IMG_SIZE, H = IMG_SIZE, C = INPUT_CH;
-  const tensor = new ort.Tensor('float32', inputData, [1,C,H,W]);
-  const feeds = {};
-  // auto-detect input name
-  const inp = session.inputNames ? session.inputNames[0] : "input";
-  feeds[inp] = tensor;
-
-  const t1 = performance.now();
-  const out = await session.run(feeds);
-  const inf = performance.now() - t1;
-
-  // auto-detect output name
-  const outName = session.outputNames ? session.outputNames[0] : Object.keys(out)[0];
-  const logits = out[outName].data;
-  // multi-label: sigmoid
-  const probs = Array.from(logits).map(sigmoid);
-  const tot = performance.now() - t0;
-
-  // update UI
-  document.getElementById("mPre").textContent = pre.toFixed(2);
-  document.getElementById("mInf").textContent = inf.toFixed(2);
-  document.getElementById("mTot").textContent = tot.toFixed(2);
-  document.getElementById("inShape").textContent = `1×${C}×${H}×${W}`;
-  updateProbChart(probs);
-  showBars(probs);
-  renderGuidance(LABELS[probs.indexOf(Math.max(...probs))]);
-  announce("Inference complete. See results below.");
-  return { probs, pre, inf, tot };
-}
-
-/* ========================= Camera mode ========================= */
-let stream = null, rafId = null, lastFrameTime = performance.now(), fps=0;
-async function startCamera(){
-  try{
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:"user", width:{ideal:1280}, height:{ideal:720} }, audio:false });
-    const video = document.getElementById("video");
-    video.srcObject = stream;
-    document.getElementById("camStatus").textContent = "Camera on. Position your eye(s), then capture.";
-    document.getElementById("capture").disabled = false;
-    document.getElementById("stopCam").disabled = false;
-    // FPS estimator
-    const tick = ()=>{
-      const now = performance.now();
-      const dt = now - lastFrameTime; lastFrameTime = now;
-      fps = 1000/dt;
-      document.getElementById("fps").textContent = fps.toFixed(1);
-      rafId = requestAnimationFrame(tick);
-    };
-    rafId = requestAnimationFrame(tick);
-  }catch(e){
-    alert("Camera not available or permission denied.");
-  }
-}
-function stopCamera(){
-  if(rafId) cancelAnimationFrame(rafId);
-  if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
-  document.getElementById("video").srcObject = null;
-  document.getElementById("camStatus").textContent = "Camera off.";
-  document.getElementById("capture").disabled = true;
-  document.getElementById("stopCam").disabled = true;
-  document.getElementById("analyzeCam").disabled = true;
-}
-function captureFrame(){
-  const video = document.getElementById("video");
-  const canvas = document.getElementById("captureCanvas");
-  drawSquareToCanvas(video, canvas);
-  document.getElementById("analyzeCam").disabled = false;
-  document.getElementById("downloadFrame").disabled = false;
-}
-function downloadFrame(){
-  const link = document.createElement('a');
-  link.download = 'eye_capture.png';
-  link.href = document.getElementById("captureCanvas").toDataURL("image/png");
-  link.click();
-}
-document.getElementById("startCam").addEventListener("click", startCamera);
-document.getElementById("stopCam").addEventListener("click", stopCamera);
-document.getElementById("capture").addEventListener("click", captureFrame);
-document.getElementById("downloadFrame").addEventListener("click", downloadFrame);
-document.getElementById("analyzeCam").addEventListener("click", async ()=>{
-  await runInferenceFromCanvas(document.getElementById("captureCanvas"));
-});
-document.getElementById("speakCamera").addEventListener("click", ()=> speakEl("#panel-camera"));
-
-/* ========================= Upload mode ========================= */
-const fileInput = document.getElementById("fileInput");
-fileInput.addEventListener("change", ()=>{
-  const f = fileInput.files?.[0];
-  if(!f) return;
-  const url = URL.createObjectURL(f);
-  const img = document.getElementById("preview");
-  img.onload = ()=>{
-    drawSquareToCanvas(img, document.getElementById("fileCanvas"));
-    document.getElementById("analyzeFile").disabled = false;
-    URL.revokeObjectURL(url);
-  };
-  img.src = url;
-});
-document.getElementById("analyzeFile").addEventListener("click", async ()=>{
-  await runInferenceFromCanvas(document.getElementById("fileCanvas"));
-});
-document.getElementById("speakUpload").addEventListener("click", ()=> speakEl("#panel-upload"));
-
-/* ========================= Manual mode ========================= */
-document.getElementById("manualShow").addEventListener("click", ()=>{
-  const v = document.getElementById("manualSelect").value;
-  if(!v){ announce("Pick a condition first."); return; }
-  const probs = LABELS.map(l=> l===v ? 0.95 : 0.05/(LABELS.length-1));
-  updateProbChart(probs);
-  showBars(probs);
-  renderGuidance(v);
-  document.getElementById("mPre").textContent = "—";
-  document.getElementById("mInf").textContent = "—";
-  document.getElementById("mTot").textContent = "—";
-  document.getElementById("inShape").textContent = "manual";
-  announce(`Manual: ${v}. Showing guidance.`);
-});
-document.getElementById("speakManual").addEventListener("click", ()=> speakEl("#panel-manual"));
-
-/* ========================= Speak buttons in results/guidance ========================= */
-document.getElementById("btnSpeakMetrics").addEventListener("click", ()=>{
-  const s = `Preprocess ${document.getElementById("mPre").textContent} milliseconds. `+
-            `Inference ${document.getElementById("mInf").textContent} milliseconds. `+
-            `Total ${document.getElementById("mTot").textContent} milliseconds. `+
-            `Backend ${document.getElementById("backend").textContent}. Input shape ${document.getElementById("inShape").textContent}.`;
-  speak(s);
-});
-document.getElementById("btnSpeakGuidance").addEventListener("click", ()=> speakEl("#guidanceText"));
-document.querySelectorAll("[data-say]").forEach(btn=>{
-  btn.addEventListener("click", ()=> speakEl(btn.getAttribute("data-say")));
+/* ============== ACCESSIBLE KEYBOARD SHORTCUTS (OPTIONAL) ==================== */
+document.addEventListener('keydown', (e)=>{
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+  if (e.key === 'c'){ document.getElementById('tabCamera').click(); }
+  if (e.key === 'u'){ document.getElementById('tabUpload').click(); }
+  if (e.key === 'm'){ document.getElementById('tabManual').click(); }
+  if (e.key === 't'){ ttsToggle.click(); }
 });
 
-/* ========================= JSON report export ========================= */
-document.getElementById("btnExport").addEventListener("click", ()=>{
-  const table = document.querySelector("#probTableWrap table");
-  const rows = table ? Array.from(table.querySelectorAll("tbody tr")).map(tr=>{
-    const tds = tr.querySelectorAll("td");
-    return { label: tds[0].textContent, probability: parseFloat(tds[1].textContent) };
-  }) : [];
-  const payload = {
-    model: backendName,
-    top: document.getElementById("topPred").textContent,
-    top_confidence: document.getElementById("topConf").textContent,
-    metrics: {
-      preprocess_ms: document.getElementById("mPre").textContent,
-      inference_ms: document.getElementById("mInf").textContent,
-      total_ms: document.getElementById("mTot").textContent,
-      input: document.getElementById("inShape").textContent
-    },
-    distribution: rows,
-    timestamp: new Date().toISOString()
-  };
-  const blob = new Blob([JSON.stringify(payload,null,2)], {type:"application/json"});
-  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "b-eye-o-marker_report.json"; a.click();
-  URL.revokeObjectURL(a.href);
+/* ============================== ANALYZE HOOKS =============================== */
+document.getElementById('snap').addEventListener('click', ()=> {
+  // After taking picture, pre-fill image info:
+  document.getElementById('imgInfo').textContent = "Camera capture";
 });
+
 </script>
 </body>
 </html>
