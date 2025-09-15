@@ -3,725 +3,628 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>B-Eye-O-Marker — CNN-V2 (BiNLOP-3)</title>
-<meta name="description" content="Accessible, TTS-enabled retinal analysis demo using B-Eye-O-Marker_CNN-V2 (BiNLOP-3) ONNX." />
-<!-- Chart.js (for accessible visualizations; table is provided for screen readers) -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha256-s3z7uLQe2jF7m9uN0uOAhjHLtPq4dPSmabnxyOV9B6o=" crossorigin="anonymous"></script>
-<!-- ONNX Runtime Web (WASM; widely supported) -->
-<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js" integrity="sha256-7z+u6QWT9P4gH1o8p6Q1mTv1QX+/dO1VfWOu2+Y1WJs=" crossorigin="anonymous"></script>
+<title>B-Eye-O-Marker CNN-V2 (BiNLOP-3) — Accessible Inference UI</title>
+<meta name="description" content="On-device eye condition analyzer (Camera/Upload/Manual), ONNX Runtime Web, fully accessible with TTS." />
 <style>
   :root{
-    --bg: #0b1020; --panel:#11162b; --panel-2:#0d1226; --text:#e7ecff; --muted:#9fb0ff;
-    --accent:#7aa2ff; --accent-2:#5ce1e6; --good:#6be675; --warn:#ffd166; --bad:#ff6b6b;
-    --focus:#ffe27a; --border:#1f2a48; --shadow: rgba(0,0,0,0.35);
-    --radius: 16px; --radius-sm: 12px;
+    --bg:#0b1020;--panel:#121a2f;--panel-2:#0e1530;--text:#eef2ff;--muted:#b7c1e6;
+    --accent:#68d391;--accent-2:#60a5fa;--warn:#fbbf24;--err:#f87171;
+    --card:#0d1530;--hl:#1c2750;--focus:#93c5fd;--ok:#34d399;
   }
-  [data-contrast="high"]{
-    --bg:#000; --panel:#050505; --panel-2:#0a0a0a; --text:#fff; --muted:#ccc; --accent:#00e; --accent-2:#0aa;
-    --focus:#ff0; --border:#444;
-  }
-  @media (prefers-reduced-motion: reduce){
-    *{ animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration:0.01ms !important; scroll-behavior:auto !important; }
-  }
+  *{box-sizing:border-box}
   html,body{height:100%}
   body{
-    margin:0; background: radial-gradient(1200px 900px at 10% 0%, #12193a, var(--bg)) fixed;
-    color:var(--text); font: 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
+    margin:0;background:linear-gradient(180deg,#0a0f22 0%, #101733 100%);
+    color:var(--text);font:16px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial;
   }
-  .container{max-width:1200px;margin:0 auto;padding:24px}
-  header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:12px}
-  .brand{display:flex;gap:12px;align-items:center}
-  .logo{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:0 6px 22px var(--shadow)}
-  h1{font-weight:800;letter-spacing:0.4px;margin:0}
-  .panel{background:linear-gradient(180deg,var(--panel),var(--panel-2)); border:1px solid var(--border); border-radius:var(--radius); box-shadow:0 10px 30px var(--shadow)}
-  .panel .content{padding:18px}
-  nav.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:6px}
-  .tab{cursor:pointer;border:none;background:transparent;color:var(--muted);padding:10px 14px;border-radius:12px;transition:all .2s}
-  .tab[aria-selected="true"]{background:linear-gradient(180deg,#1a2142,#0f1634);color:var(--text);box-shadow:0 6px 18px var(--shadow)}
+  a{color:var(--accent-2)}
+  .wrap{max-width:1200px;margin:0 auto;padding:24px}
+  header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand h1{font-size:20px;margin:0}
+  .badge{background:var(--hl);border:1px solid #2a386b;color:#cfe1ff;padding:4px 8px;border-radius:999px;font-size:12px}
+  .panel{background:var(--panel);border:1px solid #1e2954;border-radius:16px;padding:16px}
   .grid{display:grid;gap:16px}
-  @media(min-width:960px){ .grid.cols-2{grid-template-columns:1.1fr 1fr} .grid.cols-3{grid-template-columns:1fr 1fr 1fr} }
-  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  .btn{
-    background:linear-gradient(180deg,#1f2a52,#152045); border:1px solid var(--border); color:var(--text);
-    padding:10px 14px; border-radius:12px; cursor:pointer; transition:transform .05s ease, box-shadow .2s;
+  @media(min-width:900px){.grid-2{grid-template-columns:1.2fr .8fr}}
+  .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+  button, input[type="file"], select{
+    background:var(--hl);color:var(--text);border:1px solid #2a386b;border-radius:10px;padding:10px 14px;
+    font-weight:600;cursor:pointer
   }
-  .btn:hover{box-shadow:0 8px 24px var(--shadow)}
-  .btn:active{transform:translateY(1px)}
-  .btn.primary{background:linear-gradient(180deg,var(--accent),#456bff); color:#08102a; font-weight:700}
-  .btn.warn{background:linear-gradient(180deg,#573116,#2a140b); border:1px solid #6a3b1a}
-  input[type="file"], input[type="text"], select{
-    background:#0b1230;border:1px solid var(--border);color:var(--text);padding:10px;border-radius:10px
-  }
-  label{display:block;margin-bottom:6px;color:var(--muted)}
-  .kbd{background:#0a1030;border:1px solid var(--border); padding:2px 6px; border-radius:8px}
-  .card{padding:14px;border-top:1px solid var(--border)}
-  .sr-only{position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important;}
-  .live{position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden;}
-  .pill{display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:100px; border:1px solid var(--border); background:#0a1230; color:var(--muted); font-size:12px}
-  .meter{height:10px;background:#0b122a;border-radius:100px;border:1px solid var(--border); overflow:hidden}
-  .meter > span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2))}
-  .warning{color:var(--warn)}
-  .danger{color:var(--bad)}
-  .good{color:var(--good)}
-  footer{opacity:.9;margin-top:22px}
-  .flex{display:flex;gap:8px;align-items:center}
-  .right{margin-left:auto}
-  .wide{width:100%}
-  .chart-wrap{position:relative;min-height:280px}
-  .kbd-row{display:flex;gap:10px;flex-wrap:wrap}
-  .vis{border-radius:12px;background:#060a1a; border:1px solid var(--border); padding:8px}
-  .img-preview{width:100%;max-height:420px;object-fit:contain;border-radius:12px;border:1px solid var(--border);background:#050a18}
-  .video{width:100%;max-height:420px;border-radius:12px;border:1px solid var(--border);background:#050a18}
-  .section-title{display:flex;align-items:center;gap:8px;margin:0 0 8px 0}
-  .section-title h2{margin:0}
-  a, button, input, select, textarea{outline-color: var(--focus); outline-offset: 2px}
+  button:disabled{opacity:.6;cursor:not-allowed}
+  button.primary{background:linear-gradient(90deg,#2563eb,#06b6d4);border:none}
+  button.warn{background:linear-gradient(90deg,#f59e0b,#ef4444);border:none}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap}
+  .tab{padding:8px 12px;border-radius:999px;border:1px solid #2a386b;background:#0e1530;color:#cfe1ff;cursor:pointer}
+  .tab[aria-selected="true"]{background:var(--accent-2);color:#051225;border-color:transparent}
+  .section{display:none}
+  .section.active{display:block}
+  .kpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .kpi div{background:var(--panel-2);border:1px solid #243159;border-radius:12px;padding:12px}
+  .kpi h3{margin:0 0 6px 0;font-size:12px;color:var(--muted)}
+  .kpi p{margin:0;font-size:18px;font-weight:700}
+  .flex{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .video-wrap{position:relative;background:#000;border-radius:12px;overflow:hidden;border:1px solid #1f2a52}
+  video, canvas{max-width:100%;display:block}
+  .sr-only{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
+  .live{border-left:4px solid var(--accent);padding-left:12px}
+  .chart-card{background:var(--panel-2);border:1px solid #243159;border-radius:12px;padding:12px}
+  .rec-card{background:var(--panel-2);border:1px solid #243159;border-radius:12px;padding:12px}
+  .footer{opacity:.85;font-size:12px;margin-top:16px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#0d1a3a;border:1px solid #2a386b;color:#d2dfff;font-size:12px}
+  .progress-outer{background:#0b132b;border-radius:999px;overflow:hidden;border:1px solid #243159}
+  .progress-inner{height:10px;background:linear-gradient(90deg,#22c55e,#06b6d4)}
+  .skip a{position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden}
+  .skip a:focus{position:static;width:auto;height:auto;background:#fff;color:#000;padding:4px 8px}
+  .tts-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .label{font-size:12px;color:var(--muted)}
 </style>
 </head>
-<body data-contrast="normal">
-<a href="#main" class="sr-only">Skip to main content</a>
-<div class="container">
-  <header aria-label="Application header">
-    <div class="brand" role="img" aria-label="B-Eye-O-Marker logo">
-      <div class="logo" aria-hidden="true"></div>
-      <div>
-        <h1>B-Eye-O-Marker — CNN-V2 (BiNLOP-3)</h1>
-        <div class="kbd-row" aria-hidden="true">
-          <span class="pill">Client-side ONNX</span>
-          <span class="pill">Accessible + TTS</span>
-          <span class="pill">Camera / Upload / Manual</span>
-        </div>
-      </div>
+<body>
+<div class="skip"><a href="#main">Skip to main content</a></div>
+<div class="wrap" role="application" aria-label="B-Eye-O-Marker accessible inference interface">
+  <header aria-label="Header and model controls">
+    <div class="brand" aria-label="Branding">
+      <span class="badge" aria-label="Model family">B-Eye-O-Marker</span>
+      <h1 id="appTitle">CNN-V2 (BiNLOP-3) — Local ONNX</h1>
     </div>
-    <div class="controls" role="group" aria-label="Accessibility controls">
-      <button class="btn" id="ttsToggle" aria-pressed="false" aria-label="Toggle text to speech">🔊 TTS: Off</button>
-      <button class="btn" id="contrastToggle" aria-pressed="false" aria-label="Toggle high contrast">🌓 High Contrast</button>
-      <label class="sr-only" for="fontSize">Text size</label>
-      <select id="fontSize" aria-label="Text size">
-        <option value="16">Text: 100%</option>
-        <option value="18">Text: 112%</option>
-        <option value="20">Text: 125%</option>
-        <option value="22">Text: 138%</option>
+    <div class="controls" role="group" aria-label="Model loading and runtime controls">
+      <button id="btnLoadModel" class="primary" aria-describedby="modelStatus">Load ONNX Model</button>
+      <input id="fileModel" type="file" accept=".onnx" class="sr-only" aria-hidden="true" />
+      <select id="backend" aria-label="Execution provider">
+        <option value="webgpu">WebGPU (fastest, preferred)</option>
+        <option value="webgl">WebGL</option>
+        <option value="wasm">WASM (fallback)</option>
       </select>
-      <button class="btn" id="stopTTS" aria-label="Stop speech">⏹ Stop</button>
+      <span id="modelStatus" class="pill" role="status" aria-live="polite">Model: not loaded</span>
     </div>
   </header>
 
-  <!-- Model loader -->
-  <section class="panel" aria-labelledby="modelTitle" id="modelPanel">
-    <div class="content">
-      <div class="section-title">
-        <h2 id="modelTitle">1) Load Model</h2>
-        <button class="btn" id="readModel" aria-label="Read this section">🔊 Read</button>
+  <main id="main" class="grid grid-2" aria-label="Main content">
+    <section class="panel" aria-label="Modes and inputs">
+      <h2>Choose Mode</h2>
+      <div class="tabs" role="tablist" aria-label="Input modes">
+        <button class="tab" role="tab" id="tabCamera" aria-controls="secCamera" aria-selected="true">Camera</button>
+        <button class="tab" role="tab" id="tabUpload" aria-controls="secUpload" aria-selected="false">Upload Photo</button>
+        <button class="tab" role="tab" id="tabManual" aria-controls="secManual" aria-selected="false">Manual</button>
       </div>
-      <p id="modelDesc">Load your ONNX file <strong>B-Eye-O-Marker_CNN-V2.onnx</strong>. All inference runs locally in your browser.</p>
-      <div class="controls" role="group" aria-label="Model loading">
-        <label for="modelFile">Local ONNX file</label>
-        <input type="file" id="modelFile" accept=".onnx" />
-        <span>or</span>
-        <label class="sr-only" for="modelUrl">Model URL</label>
-        <input type="text" id="modelUrl" placeholder="https://your-host/B-Eye-O-Marker_CNN-V2.onnx" size="48" />
-        <button class="btn primary" id="loadModelBtn">Load Model</button>
-        <span id="modelStatus" role="status" aria-live="polite" class="pill">Model: not loaded</span>
-      </div>
-      <div class="card">
-        <div class="flex">
-          <div class="pill" id="prov">Provider: N/A</div>
-          <div class="pill" id="opset">Opset: N/A</div>
-          <div class="pill" id="graphopt">GraphOpt: N/A</div>
-          <div class="pill" id="mem">Memory: N/A</div>
-          <div class="pill" id="lat">Last infer: N/A</div>
-          <div class="right pill">Threshold: <span id="thrVal">0.50</span></div>
-        </div>
-        <input type="range" min="0" max="100" value="50" id="thr" class="wide" aria-label="Threshold slider for multi-label decisions" />
-      </div>
-    </div>
-  </section>
-
-  <!-- Modes -->
-  <section class="panel" aria-labelledby="modesTitle">
-    <div class="content">
-      <div class="section-title">
-        <h2 id="modesTitle">2) Choose Mode</h2>
-        <button class="btn" id="readModes" aria-label="Read this section">🔊 Read</button>
-      </div>
-      <nav class="tabs" role="tablist" aria-label="Input mode tabs">
-        <button class="tab" role="tab" id="tabCamera" aria-selected="true" aria-controls="panelCamera">📷 Camera</button>
-        <button class="tab" role="tab" id="tabUpload" aria-selected="false" aria-controls="panelUpload">🖼️ Upload Photo</button>
-        <button class="tab" role="tab" id="tabManual" aria-selected="false" aria-controls="panelManual">✍️ Manual</button>
-      </nav>
 
       <!-- Camera -->
-      <div id="panelCamera" role="tabpanel" aria-labelledby="tabCamera">
-        <div class="grid cols-2">
-          <div>
-            <label for="cameraSelect">Camera device</label>
-            <select id="cameraSelect" aria-label="Choose camera"></select>
-            <video id="video" class="video" autoplay playsinline muted aria-label="Camera preview"></video>
-            <div class="controls">
-              <button class="btn" id="startCam">Start Camera</button>
-              <button class="btn" id="snap">Take Picture</button>
-              <button class="btn" id="analyzeCam">Analyze</button>
-              <button class="btn warn" id="stopCam">Stop Camera</button>
-            </div>
-          </div>
-          <div>
-            <canvas id="canvasCam" class="img-preview" aria-label="Captured image preview" role="img"></canvas>
-            <div class="card">
-              <p>Tip: good lighting, hold steady, center the eye. Avoid reflections and motion blur.</p>
-            </div>
-          </div>
+      <div id="secCamera" class="section active" role="tabpanel" aria-labelledby="tabCamera">
+        <div class="video-wrap" aria-label="Camera preview">
+          <video id="video" autoplay playsinline muted aria-label="Live camera feed"></video>
         </div>
+        <div class="flex" style="margin-top:10px">
+          <button id="btnStartCam">Start Camera</button>
+          <button id="btnSnap" class="primary" disabled>Take Picture & Analyze</button>
+          <button id="btnStopCam" class="warn" disabled>Stop Camera</button>
+        </div>
+        <canvas id="canvas" class="sr-only" aria-hidden="true"></canvas>
       </div>
+
       <!-- Upload -->
-      <div id="panelUpload" role="tabpanel" aria-labelledby="tabUpload" hidden>
-        <div class="grid cols-2">
-          <div>
-            <label for="imgFile">Choose image</label>
-            <input type="file" id="imgFile" accept="image/*" />
-            <div class="controls">
-              <button class="btn" id="analyzeUpload">Analyze</button>
-            </div>
-          </div>
-          <div>
-            <img id="imgPreview" class="img-preview" alt="Uploaded image preview" />
-          </div>
+      <div id="secUpload" class="section" role="tabpanel" aria-labelledby="tabUpload">
+        <input id="fileImage" type="file" accept="image/*" aria-label="Upload an eye photo for analysis" />
+        <div id="uploadPreview" class="video-wrap" style="margin-top:10px" aria-label="Uploaded image preview"></div>
+        <div class="flex" style="margin-top:10px">
+          <button id="btnAnalyzeUpload" class="primary" disabled>Analyze Uploaded Photo</button>
         </div>
       </div>
+
       <!-- Manual -->
-      <div id="panelManual" role="tabpanel" aria-labelledby="tabManual" hidden>
-        <div class="grid cols-2">
-          <div>
-            <label for="manualSelect">Select your condition (manual mode)</label>
-            <select id="manualSelect" aria-label="Manual condition select">
-              <option value="">-- Choose a condition --</option>
-            </select>
-            <div class="controls">
-              <button class="btn primary" id="manualExplain">Explain & Recommendations</button>
-            </div>
-          </div>
-          <div class="card">
-            <p>This mode does not run the CNN. It provides educational guidance based on your selection.</p>
-          </div>
+      <div id="secManual" class="section" role="tabpanel" aria-labelledby="tabManual">
+        <label class="label" for="manualSelect">Select your condition manually (CNN bypassed):</label><br/>
+        <select id="manualSelect" aria-label="Manual condition selector">
+          <option value="Normal">Normal</option>
+          <option value="DiabeticRetinopathy">Diabetic Retinopathy (DR)</option>
+          <option value="DiabeticMacularEdema">Diabetic Macular Edema (DME)</option>
+          <option value="AgeRelatedMacularDegeneration">Age-Related Macular Degeneration (AMD)</option>
+          <option value="Glaucoma">Glaucoma</option>
+          <option value="RetinalDetachment">Retinal Detachment (RD)</option>
+          <option value="EpiretinalMembrane">Epiretinal Membrane (ERM)</option>
+          <option value="VitreousDetachment">Vitreous Detachment</option>
+          <option value="Other">Other / Unspecified</option>
+        </select>
+        <div class="flex" style="margin-top:10px">
+          <button id="btnManual" class="primary">Generate Guidance</button>
         </div>
       </div>
-    </div>
-  </section>
 
-  <!-- Results -->
-  <main id="main" class="panel" aria-labelledby="resultsTitle">
-    <div class="content">
-      <div class="section-title">
-        <h2 id="resultsTitle">3) Results & Insights</h2>
-        <button class="btn" id="readResults" aria-label="Read this section">🔊 Read</button>
+      <div class="panel" style="margin-top:16px" aria-label="Text-to-speech controls">
+        <h2>Text-to-Speech</h2>
+        <div class="tts-controls">
+          <label for="voiceSel">Voice:</label>
+          <select id="voiceSel" aria-label="TTS Voice"></select>
+          <label for="rateSel">Rate:</label>
+          <input id="rateSel" type="range" min="0.6" max="1.4" step="0.05" value="1" aria-label="TTS rate" />
+          <label for="volSel">Volume:</label>
+          <input id="volSel" type="range" min="0.2" max="1" step="0.05" value="1" aria-label="TTS volume" />
+          <label><input id="autoSpeak" type="checkbox" aria-label="Automatically speak results" /> Auto-speak results</label>
+          <button id="btnSpeak" aria-label="Speak the current results">Speak Now</button>
+          <button id="btnStopSpeak" aria-label="Stop speaking">Stop</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="Results and insights">
+      <h2>Results</h2>
+
+      <div class="kpi" aria-label="Key performance indicators">
+        <div><h3>Inference Latency</h3><p id="latency">—</p></div>
+        <div><h3>Backend</h3><p id="kBackend">—</p></div>
+        <div><h3>Image Size</h3><p id="kImg">—</p></div>
+        <div><h3>Top Class</h3><p id="kTop">—</p></div>
       </div>
 
-      <!-- Summary -->
-      <section aria-labelledby="summaryTitle" class="card">
-        <div class="flex">
-          <h3 id="summaryTitle" style="margin:0">Summary</h3>
-          <button class="btn" id="readSummary" aria-label="Read summary">🔊 Read</button>
-        </div>
-        <div class="grid cols-3">
-          <div class="vis">
-            <p><strong>Top-1 class:</strong> <span id="topClass">—</span></p>
-            <div class="meter" aria-label="Top confidence meter"><span id="confMeter" style="width:0%"></span></div>
-            <p><strong>Confidence:</strong> <span id="topConf">—</span></p>
-            <p><strong>Above threshold (multi-label):</strong> <span id="aboveThr">—</span></p>
-          </div>
-          <div class="vis">
-            <p><strong>Entropy (lower = certain):</strong> <span id="entropy">—</span></p>
-            <p><strong>Top-1 vs Top-2 gap:</strong> <span id="margin">—</span></p>
-            <p><strong>Latency:</strong> <span id="latency">—</span></p>
-            <p><strong>Provider:</strong> <span id="providerName">—</span></p>
-          </div>
-          <div class="vis">
-            <p><strong>Image:</strong> <span id="imgInfo">—</span></p>
-            <p><strong>Threshold:</strong> <span id="thrSummary">0.50</span></p>
-            <p class="warning"><strong>Important:</strong> This is not a medical device. Not for diagnosis. Consult an eye-care professional.</p>
-          </div>
-        </div>
-      </section>
+      <div class="chart-card" style="margin-top:12px" aria-label="Probability distribution chart">
+        <h3>Probability Distribution</h3>
+        <canvas id="chart" role="img" aria-label="Bar chart of class probabilities"></canvas>
+        <div class="sr-only" id="chartText" aria-live="polite"></div>
+      </div>
 
-      <!-- Probabilities -->
-      <section aria-labelledby="probsTitle" class="card">
-        <div class="flex">
-          <h3 id="probsTitle" style="margin:0">Probability Distribution</h3>
-          <button class="btn" id="readProbs" aria-label="Read probabilities">🔊 Read</button>
-        </div>
-        <div class="grid cols-2">
-          <div class="chart-wrap">
-            <canvas id="probChart" aria-label="Probability bar chart"></canvas>
-          </div>
-          <div>
-            <table aria-label="Probabilities table" id="probTable">
-              <thead><tr><th scope="col">Class</th><th scope="col">Probability</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+      <div class="rec-card" style="margin-top:12px" aria-label="Recommendations and context">
+        <h3>Recommendations & Overview</h3>
+        <div id="recommendations" class="live" aria-live="polite">No results yet.</div>
+      </div>
 
-      <!-- Recommendations & Overview -->
-      <section aria-labelledby="recsTitle" class="card">
-        <div class="flex">
-          <h3 id="recsTitle" style="margin:0">Recommendations & Deep Overview</h3>
-          <button class="btn" id="readRecs" aria-label="Read recommendations">🔊 Read</button>
+      <div class="rec-card" style="margin-top:12px" aria-label="Additional metrics">
+        <h3>Additional Metrics</h3>
+        <ul id="metricsList">
+          <li>Preprocessing time: <span id="prepTime">—</span></li>
+          <li>Model input shape: <span id="inputShape">—</span></li>
+          <li>Output logits shape: <span id="outShape">—</span></li>
+        </ul>
+        <div class="progress-outer" aria-label="Confidence of top class">
+          <div id="confBar" class="progress-inner" style="width:0%"></div>
         </div>
-        <div id="recsBody"></div>
-      </section>
+      </div>
 
-      <!-- Live region for announcements -->
-      <div id="live" class="live" aria-live="polite" aria-atomic="true"></div>
-    </div>
+      <div class="footer" aria-label="Important note">
+        <strong>Disclaimer:</strong> This tool is for informational and educational purposes only and is <em>not</em> a medical device. It does not provide medical advice, diagnosis, or treatment. Always consult a qualified clinician for concerns about your eyes or vision.
+      </div>
+    </section>
   </main>
-
-  <footer>
-    <div class="panel">
-      <div class="content">
-        <p><strong>Safety:</strong> Educational demo only. Not medical advice. If you have symptoms or concerns, seek professional evaluation promptly.</p>
-      </div>
-    </div>
-  </footer>
 </div>
 
+<!-- Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
 <script>
-/* ========================= GLOBALS & ACCESSIBILITY ========================= */
+/* ==========================
+   Accessible, TTS-first, Local ONNX UI
+   ========================== */
+
 const CLASSES = [
-  "Normal","DiabeticRetinopathy","DiabeticMacularEdema","AgeRelatedMacularDegeneration",
-  "Glaucoma","RetinalDetachment","EpiretinalMembrane","VitreousDetachment","Other"
+  "Normal",
+  "DiabeticRetinopathy",
+  "DiabeticMacularEdema",
+  "AgeRelatedMacularDegeneration",
+  "Glaucoma",
+  "RetinalDetachment",
+  "EpiretinalMembrane",
+  "VitreousDetachment",
+  "Other"
 ];
-// Educational summaries + tips (kept concise for TTS; expanded in UI):
-const EXPLAINS = {
-  "Normal": {
-    overview: "No strong signals of disease in this image. This does not exclude early or subtle disease.",
-    tips: ["Maintain routine eye exams.","Manage blood pressure, blood sugar, and cholesterol.","Use protective eyewear and take screen breaks."]
-  },
-  "DiabeticRetinopathy": {
-    overview: "Findings consistent with diabetic retinopathy risk. Microvascular changes may impact retina.",
-    tips: ["Optimize blood glucose, blood pressure, and lipids.","Schedule a comprehensive dilated eye exam.","Report any sudden vision changes immediately."]
-  },
-  "DiabeticMacularEdema": {
-    overview: "Signals suggest possible macular edema related to diabetes; can reduce central vision.",
-    tips: ["Urgent clinical assessment is recommended.","Manage systemic risk factors.","Discuss anti-VEGF or laser options with a specialist."]
-  },
-  "AgeRelatedMacularDegeneration": {
-    overview: "Features may align with AMD, which affects central vision via macula.",
-    tips: ["Consult on AREDS supplements if appropriate.","Avoid smoking; use UV protection.","Monitor central vision (Amsler grid) and seek care if changes arise."]
-  },
-  "Glaucoma": {
-    overview: "Possible optic nerve or intraocular pressure related risk. Typically requires longitudinal assessment.",
-    tips: ["Schedule professional evaluation including pressure and visual fields.","Adhere to prescribed drops if applicable.","Discuss family history."]
-  },
-  "RetinalDetachment": {
-    overview: "Concerning for retinal detachment risk which can threaten vision.",
-    tips: ["This warrants urgent, same-day clinical evaluation.","Avoid strenuous activity until cleared.","Note flashes, floaters, or a curtain over vision."]
-  },
-  "EpiretinalMembrane": {
-    overview: "A membrane on the retinal surface may cause distortion.",
-    tips: ["Clinical confirmation recommended.","Discuss observation vs peeling surgery depending on symptoms.","Monitor distortion and visual acuity."]
-  },
-  "VitreousDetachment": {
-    overview: "Age-related gel separation can cause floaters or flashes.",
-    tips: ["Rule out retinal tear with a clinician if symptomatic.","Follow return precautions if new symptoms occur.","Use protective behavior until cleared."]
-  },
-  "Other": {
-    overview: "The pattern does not map cleanly to known classes here.",
-    tips: ["Request professional evaluation for tailored diagnosis.","Provide high-quality images or clinical history.","Consider alternate imaging modalities."]
-  }
-};
+const IMG_SIZE = 384; // training default (HxW)
+const CHANNELS = 3;   // RGB
+const MODEL_DB_NAME = 'b_eye_o_marker_model_db';
+const MODEL_DB_KEY  = 'onnx_bytes';
 
-// TTS
-let TTS_ENABLED = false;
-const speak = (text) => {
-  if (!TTS_ENABLED) return;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.rate = 1.0; u.pitch = 1.0; u.volume = 1.0;
-  window.speechSynthesis.speak(u);
-};
-const stopSpeak = () => window.speechSynthesis.cancel();
-const live = (msg) => { const el = document.getElementById('live'); el.textContent = msg; if (TTS_ENABLED) speak(msg); };
+let ortSession = null;
+let chart = null;
+let currentResultText = '';
+let voices = [];
+let lastImageRGBA = null;
 
-/* =============================== UI CONTROLS =============================== */
-const ttsToggle = document.getElementById('ttsToggle');
-ttsToggle.addEventListener('click', () => {
-  TTS_ENABLED = !TTS_ENABLED;
-  ttsToggle.setAttribute('aria-pressed', String(TTS_ENABLED));
-  ttsToggle.textContent = TTS_ENABLED ? "🔊 TTS: On" : "🔊 TTS: Off";
-  live(`Text to speech ${TTS_ENABLED ? 'enabled' : 'disabled'}.`);
-});
-document.getElementById('stopTTS').addEventListener('click', stopSpeak);
-
-document.getElementById('contrastToggle').addEventListener('click', (e) => {
-  const cur = document.body.getAttribute('data-contrast');
-  const next = cur === 'high' ? 'normal' : 'high';
-  document.body.setAttribute('data-contrast', next);
-  e.currentTarget.setAttribute('aria-pressed', String(next === 'high'));
-  live(`High contrast ${next === 'high' ? 'enabled' : 'disabled'}.`);
-});
-document.getElementById('fontSize').addEventListener('change', (e) => {
-  document.body.style.fontSize = e.target.value + 'px';
-  live(`Font size set to ${e.target.selectedOptions[0].textContent}.`);
-});
-
-// Section read buttons
-const readBtns = [
-  ["readModel","modelPanel"],
-  ["readModes","modesTitle"],
-  ["readResults","resultsTitle"],
-  ["readSummary","summaryTitle"],
-  ["readProbs","probsTitle"],
-  ["readRecs","recsTitle"]
-];
-readBtns.forEach(([btnId, tgtId]) => {
-  const btn = document.getElementById(btnId);
-  btn.addEventListener('click', () => {
-    const node = document.getElementById(tgtId);
-    let txt = "";
-    if (node) {
-      if (node.closest('.panel')) txt = node.closest('.panel').innerText;
-      else txt = node.innerText;
-    }
-    speak(txt);
+// ======================= IndexedDB: persist model for auto-load =======================
+function openIDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(MODEL_DB_NAME, 1);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('files')) db.createObjectStore('files');
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
   });
-});
-
-/* =============================== TABS / MODES ============================== */
-const tabs = [
-  {tab:"tabCamera", panel:"panelCamera"},
-  {tab:"tabUpload", panel:"panelUpload"},
-  {tab:"tabManual", panel:"panelManual"},
-];
-tabs.forEach(({tab,panel})=>{
-  const t = document.getElementById(tab);
-  const p = document.getElementById(panel);
-  t.addEventListener('click', ()=>{
-    tabs.forEach(({tab:tb,panel:pn})=>{
-      document.getElementById(tb).setAttribute('aria-selected', String(tb===tab));
-      const el = document.getElementById(pn);
-      if (pn===panel) el.removeAttribute('hidden'); else el.setAttribute('hidden','');
-    });
-    live(`${t.textContent.trim()} mode selected.`);
+}
+async function idbPutModel(bytes) {
+  const db = await openIDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('files','readwrite');
+    tx.objectStore('files').put(bytes, MODEL_DB_KEY);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
   });
-});
-
-/* ============================== MODEL LOADING ============================== */
-const thr = document.getElementById('thr');
-const thrVal = document.getElementById('thrVal');
-const thrSummary = document.getElementById('thrSummary');
-thr.addEventListener('input', ()=>{
-  const v = (thr.valueAsNumber/100).toFixed(2);
-  thrVal.textContent = v; thrSummary.textContent = v;
-});
-
-let session = null;
-let provider = 'wasm';
-const modelStatus = document.getElementById('modelStatus');
-const provElm = document.getElementById('prov'), opsetElm = document.getElementById('opset'), graphElm = document.getElementById('graphopt');
-
-async function loadModelFromBuffer(arrayBuffer){
-  modelStatus.textContent = "Loading model…";
-  const t0 = performance.now();
-  // Prefer WASM for compatibility; ORT auto-detects SIMD/threads.
-  const options = {
-    executionProviders: ['wasm'], // you can add 'webgl' if desired
-    graphOptimizationLevel: 'all'
-  };
-  session = await ort.InferenceSession.create(arrayBuffer, options);
-  provider = session.executionProvider || 'wasm';
-  const dt = (performance.now()-t0).toFixed(0);
-  modelStatus.textContent = "Model: loaded";
-  provElm.textContent = `Provider: ${provider}`;
-  graphElm.textContent = `GraphOpt: all`;
-  // Opset cannot be directly read; leave N/A unless we parse the model
-  opsetElm.textContent = `Opset: —`;
-  live(`Model loaded in ${dt} milliseconds using ${provider}.`);
+}
+async function idbGetModel() {
+  const db = await openIDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('files','readonly');
+    const req = tx.objectStore('files').get(MODEL_DB_KEY);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
 }
 
-document.getElementById('loadModelBtn').addEventListener('click', async ()=>{
-  try{
-    const fileInput = document.getElementById('modelFile');
-    const urlInput = document.getElementById('modelUrl').value.trim();
-    if (fileInput.files && fileInput.files[0]){
-      const buf = await fileInput.files[0].arrayBuffer();
-      await loadModelFromBuffer(buf);
-    } else if (urlInput){
-      const res = await fetch(urlInput);
-      if(!res.ok) throw new Error(`Fetch failed: ${res.status}`);
-      const buf = await res.arrayBuffer();
-      await loadModelFromBuffer(buf);
-    } else {
-      alert("Select a local ONNX file or enter a URL.");
+// ======================= TTS =======================
+const tts = {
+  synth: window.speechSynthesis,
+  utter: null,
+  speak(text) {
+    if (!text) return;
+    this.stop();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = parseFloat(document.getElementById('rateSel').value || '1');
+    u.volume = parseFloat(document.getElementById('volSel').value || '1');
+    const vSel = document.getElementById('voiceSel');
+    const voiceName = vSel?.value;
+    if (voices.length && voiceName) {
+      const v = voices.find(v => v.name === voiceName);
+      if (v) u.voice = v;
     }
-  }catch(err){
-    console.error(err);
-    modelStatus.textContent = "Model: error";
-    live("Model load failed.");
-    alert("Model load failed: " + err.message);
-  }
-});
-
-/* =============================== CAMERA MODE ================================ */
-const video = document.getElementById('video');
-const canvasCam = document.getElementById('canvasCam');
-const ctxCam = canvasCam.getContext('2d');
-const cameraSelect = document.getElementById('cameraSelect');
-let stream = null;
-
-async function listCameras(){
-  const devices = await navigator.mediaDevices.enumerateDevices();
-  const cams = devices.filter(d=>d.kind==='videoinput');
-  cameraSelect.innerHTML = '';
-  cams.forEach((c, i)=>{
+    this.utter = u;
+    this.synth.speak(u);
+  },
+  stop(){ if (this.synth.speaking) this.synth.cancel(); }
+};
+function populateVoices() {
+  voices = tts.synth.getVoices().filter(v => v.lang.startsWith('en') || v.localService);
+  const sel = document.getElementById('voiceSel');
+  sel.innerHTML = '';
+  voices.forEach(v => {
     const opt = document.createElement('option');
-    opt.value = c.deviceId; opt.textContent = c.label || `Camera ${i+1}`;
-    cameraSelect.appendChild(opt);
+    opt.value = v.name;
+    opt.textContent = `${v.name} — ${v.lang}${v.default ? ' (default)' : ''}`;
+    sel.appendChild(opt);
   });
 }
-async function startCamera(){
-  try{
-    if (stream){ stream.getTracks().forEach(t=>t.stop()); }
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { deviceId: cameraSelect.value ? {exact: cameraSelect.value} : undefined, width:1280, height:720 }
-    });
-    video.srcObject = stream;
-    live("Camera started.");
-  }catch(err){
-    alert("Camera error: " + err.message);
-  }
+if ('speechSynthesis' in window) {
+  speechSynthesis.onvoiceschanged = populateVoices;
+  setTimeout(populateVoices, 300);
 }
-document.getElementById('startCam').addEventListener('click', startCamera);
-document.getElementById('stopCam').addEventListener('click', ()=>{
-  if (stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; live("Camera stopped."); }
-});
-document.getElementById('snap').addEventListener('click', ()=>{
-  if (!video.videoWidth){ alert("Camera not ready."); return; }
-  canvasCam.width = video.videoWidth; canvasCam.height = video.videoHeight;
-  ctxCam.drawImage(video, 0, 0);
-  live("Image captured from camera.");
-});
-navigator.mediaDevices?.getUserMedia && listCameras().catch(()=>{});
 
-/* =============================== UPLOAD MODE ================================ */
-const imgFile = document.getElementById('imgFile');
-const imgPreview = document.getElementById('imgPreview');
-imgFile.addEventListener('change', ()=>{
-  const f = imgFile.files?.[0]; if (!f) return;
-  const url = URL.createObjectURL(f);
-  imgPreview.src = url;
-  imgPreview.onload = ()=> URL.revokeObjectURL(url);
-  live("Image selected for upload.");
-});
-
-/* ============================ MANUAL MODE (TTS) ============================= */
-const manualSelect = document.getElementById('manualSelect');
-CLASSES.forEach(c=>{
-  const o = document.createElement('option'); o.value=c; o.textContent=c; manualSelect.appendChild(o);
-});
-document.getElementById('manualExplain').addEventListener('click', ()=>{
-  const v = manualSelect.value;
-  if (!v){ alert("Select a condition first."); return; }
-  renderResultsFromManual(v);
-});
-
-/* ============================ PREPROCESS / INFER ============================ */
-// The training used: Resize(384,384), ToTensor(), no normalization → scale to [0,1].
-const TARGET = 384;
-function preprocessImageToTensor(img){
-  // Stretch to 384x384 (matches training Resize; no aspect preservation)
-  const off = document.createElement('canvas');
-  off.width = TARGET; off.height = TARGET;
-  const ictx = off.getContext('2d');
-  ictx.drawImage(img, 0, 0, TARGET, TARGET);
-  const {data} = ictx.getImageData(0,0,TARGET,TARGET);
-  // NCHW float32
-  const chw = new Float32Array(3 * TARGET * TARGET);
-  let p = 0;
-  const stride = TARGET * TARGET;
-  for (let i=0;i<data.length;i+=4){
-    const r = data[i]   / 255.0;
-    const g = data[i+1] / 255.0;
-    const b = data[i+2] / 255.0;
-    const idx = i>>2;
-    chw[idx] = r;
-    chw[idx + stride] = g;
-    chw[idx + 2*stride] = b;
-    p++;
-  }
-  const tensor = new ort.Tensor('float32', chw, [1,3,TARGET,TARGET]);
-  return {tensor, info:`${img.naturalWidth||img.width}×${img.naturalHeight||img.height} → 384×384`};
+// ======================= UI helpers =======================
+function setStatus(text, good=false){
+  const el = document.getElementById('modelStatus');
+  el.textContent = text;
+  el.style.background = good ? 'linear-gradient(90deg,#22c55e,#06b6d4)' : '';
+}
+function setKPI({latency, backend, img, top}){
+  document.getElementById('latency').textContent = latency ? `${latency.toFixed(1)} ms` : '—';
+  document.getElementById('kBackend').textContent = backend || '—';
+  document.getElementById('kImg').textContent = img || '—';
+  document.getElementById('kTop').textContent = top || '—';
 }
 function sigmoid(x){ return 1/(1+Math.exp(-x)); }
-function softmax(arr){
-  const m = Math.max(...arr); const exps = arr.map(v=>Math.exp(v-m));
-  const s = exps.reduce((a,b)=>a+b,0); return exps.map(v=>v/s);
-}
-function entropy(probs){ // Shannon entropy (base e)
-  let e=0; for(const p of probs){ const q=Math.min(Math.max(p,1e-9),1-1e-9); e += -q*Math.log(q) - (1-q)*Math.log(1-q); }
-  return e;
-}
-function topK(arr, k=2){
-  const idx = arr.map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]).slice(0,k);
-  return idx;
-}
 
-let lastLatency = null;
-
-async function runInferenceFromCanvas(){
-  if (!session){ alert("Load the model first."); return; }
-  // create an Image object from canvas
-  const img = new Image();
-  img.src = canvasCam.toDataURL('image/png');
-  await img.decode();
-  const {tensor, info} = preprocessImageToTensor(img);
-  return await runModel(tensor, info);
-}
-async function runInferenceFromUpload(){
-  if (!session){ alert("Load the model first."); return; }
-  if (!imgPreview.src){ alert("Upload an image first."); return; }
-  const img = imgPreview;
-  const {tensor, info} = preprocessImageToTensor(img);
-  return await runModel(tensor, info);
-}
-
-async function runModel(tensor, info){
-  const t0 = performance.now();
-  const feeds = { "input": tensor };
-  const outputs = await session.run(feeds);
-  const t1 = performance.now();
-  lastLatency = (t1 - t0).toFixed(1) + " ms";
-  document.getElementById('lat').textContent = `Last infer: ${lastLatency}`;
-  document.getElementById('latency').textContent = lastLatency;
-  document.getElementById('providerName').textContent = provider;
-  if (performance && performance.memory){
-    const gb = (performance.memory.usedJSHeapSize/(1024**3)).toFixed(2) + " GB";
-    document.getElementById('mem').textContent = "Memory: " + gb;
-  }
-
-  // Expect output named "logits"
-  const outName = Object.keys(outputs)[0];
-  const logits = outputs[outName].data;
-  // Multi-label → sigmoid per class
-  const probs = Array.from(logits, v=>sigmoid(v));
-  renderResultsFromProbs(probs, info);
-  return probs;
-}
-
-document.getElementById('analyzeCam').addEventListener('click', async ()=>{
-  const probs = await runInferenceFromCanvas().catch(err => alert("Inference error: "+err.message));
-});
-document.getElementById('analyzeUpload').addEventListener('click', async ()=>{
-  const probs = await runInferenceFromUpload().catch(err => alert("Inference error: "+err.message));
-});
-
-/* ============================== RENDER RESULTS ============================== */
-let chart = null;
-function ensureChart(ctx){
-  if (chart){ chart.destroy(); chart=null; }
+// ======================= Chart =======================
+function renderChart(probs){
+  const ctx = document.getElementById('chart').getContext('2d');
+  const data = {
+    labels: CLASSES,
+    datasets: [{
+      label: 'Probability',
+      data: probs.map(p => Math.round(p*1000)/10),
+      borderWidth: 1
+    }]
+  };
+  if (chart) chart.destroy();
   chart = new Chart(ctx, {
-    type:'bar',
-    data:{ labels: CLASSES, datasets: [{ label:'Probability', data: new Array(CLASSES.length).fill(0) }]},
-    options:{
-      animation:{ duration: 300 },
-      responsive:true,
-      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:(c)=> `${c.raw.toFixed(3)}` } } },
-      scales:{
-        y:{ min:0, max:1, grid:{color:'#1b2345'}, ticks:{ color:'#cfe2ff' } },
-        x:{ grid:{display:false}, ticks:{ color:'#cfe2ff', maxRotation:60, minRotation:0 } }
-      }
+    type: 'bar',
+    data,
+    options: {
+      responsive: true,
+      scales: {
+        y: { beginAtZero: true, max: 100, title: {display:true, text:'%'} }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: true }
+      },
+      animation: { duration: 300 }
     }
   });
-  return chart;
+  // Text alternative for TTS + screen readers
+  const text = probs.map((p,i)=>`${CLASSES[i]}: ${(p*100).toFixed(1)}%`).join('; ');
+  const chartText = document.getElementById('chartText');
+  chartText.textContent = `Probabilities — ${text}`;
+  return text;
 }
 
-function renderResultsFromManual(cls){
-  const probs = CLASSES.map(c => c===cls ? 0.95 : 0.05/(CLASSES.length-1));
-  renderResultsFromProbs(probs, "manual");
+// ======================= Recommendations =======================
+const RECS = {
+  Normal: [
+    "Maintain regular eye exams as advised by your optometrist/ophthalmologist.",
+    "Manage screen time with 20-20-20 rule (every 20 minutes, look 20 feet away for 20 seconds).",
+    "Keep systemic risk factors healthy: glucose, blood pressure, lipids."
+  ],
+  DiabeticRetinopathy: [
+    "Strict glycemic control and blood pressure management are critical.",
+    "Schedule a comprehensive dilated retinal exam promptly.",
+    "Ask about retinal imaging (OCT, fundus) and potential anti-VEGF therapy if indicated."
+  ],
+  DiabeticMacularEdema: [
+    "Macular changes can threaten central vision—seek an ophthalmology visit soon.",
+    "Ask about OCT imaging to quantify fluid and response to therapy.",
+    "Discuss anti-VEGF or steroid therapy if confirmed."
+  ],
+  AgeRelatedMacularDegeneration: [
+    "If metamorphopsia or distortion: urgent evaluation for neovascular AMD.",
+    "Consider Amsler grid self-monitoring and lifestyle optimization (smoking cessation).",
+    "Discuss AREDS2 supplementation with your clinician for intermediate AMD."
+  ],
+  Glaucoma: [
+    "Glaucoma is often asymptomatic—arrange IOP, visual field, and OCT RNFL testing.",
+    "Adherence to drops (if prescribed) is crucial; ask about side-effect alternatives.",
+    "Family members may benefit from screening."
+  ],
+  RetinalDetachment: [
+    "Emergency: sudden floaters/flash/curtain warrants urgent eye hospital assessment.",
+    "Avoid strenuous activity until assessed.",
+    "Surgery (pneumatic retinopexy, scleral buckle, vitrectomy) may be required."
+  ],
+  EpiretinalMembrane: [
+    "Monitor metamorphopsia and acuity; OCT confirms diagnosis.",
+    "If significant distortion, discuss surgical peeling (pars plana vitrectomy).",
+    "Optimize lighting and contrast for reading tasks."
+  ],
+  VitreousDetachment: [
+    "Common with age; if new floaters/flashes or shadow, get urgent evaluation to exclude tears.",
+    "Avoid eye rubbing; monitor symptoms for change.",
+    "Follow up as advised; retinal tears can occur around PVD onset."
+  ],
+  Other: [
+    "Condition unspecified; seek comprehensive clinical evaluation.",
+    "Document symptoms onset, severity, and any systemic factors.",
+    "Bring prior imaging or prescriptions to your visit."
+  ]
+};
+function buildOverview(topClass, probs){
+  const idx = CLASSES.indexOf(topClass);
+  const pTop = probs[idx] || 0;
+  const recs = RECS[topClass] || RECS.Other;
+  const rank = [...probs].map((p,i)=>[i,p]).sort((a,b)=>b[1]-a[1]).map(x=>CLASSES[x[0]]);
+  const txt = [
+    `Top condition: ${topClass} (${(pTop*100).toFixed(1)}%)`,
+    `Runner-ups: ${rank.slice(1,4).join(', ')}`,
+    `Recommendations: ${recs.join(' ')}`
+  ].join('. ');
+  return {recs, txt};
 }
-
-function renderResultsFromProbs(probs, imgInfo){
-  // Update chart and table
-  const ctx = document.getElementById('probChart').getContext('2d');
-  ensureChart(ctx);
-  chart.data.datasets[0].data = probs;
-  chart.update();
-
-  const tb = document.getElementById('probTable').querySelector('tbody');
-  tb.innerHTML = '';
-  probs.forEach((p,i)=>{
-    const tr = document.createElement('tr');
-    const td1 = document.createElement('td'); td1.textContent = CLASSES[i]; tr.appendChild(td1);
-    const td2 = document.createElement('td'); td2.textContent = (p*100).toFixed(2) + "%"; tr.appendChild(td2);
-    tb.appendChild(tr);
-  });
-
-  const thrVal = Number(document.getElementById('thr').value)/100;
-  const top = topK(probs,2);
-  const topIdx = top[0][1], topP = top[0][0], secondP = top[1][0];
-  const over = probs.map((p,i)=> p>=thrVal ? CLASSES[i] : null).filter(Boolean);
-
-  document.getElementById('topClass').textContent = `${CLASSES[topIdx]}`;
-  document.getElementById('topConf').textContent = (topP*100).toFixed(2) + "%";
-  document.getElementById('confMeter').style.width = Math.round(topP*100)+'%';
-  document.getElementById('aboveThr').textContent = over.length ? over.join(", ") : "None";
-  const H = entropy(probs);
-  document.getElementById('entropy').textContent = H.toFixed(3);
-  document.getElementById('margin').textContent = (topP - secondP).toFixed(3);
-  document.getElementById('thrSummary').textContent = thrVal.toFixed(2);
-  document.getElementById('imgInfo').textContent = imgInfo || "—";
-
-  // Recommendations & Overview
-  const cls = CLASSES[topIdx];
-  renderRecs(cls, probs, over, thrVal);
-
-  // Announce
-  live(`Analysis complete. Top class ${cls} with ${(topP*100).toFixed(1)} percent. ${over.length} classes above threshold.`);
-}
-
-function renderRecs(cls, probs, over, thrVal){
-  const div = document.getElementById('recsBody');
-  const explain = EXPLAINS[cls] || EXPLAINS["Other"];
-  const list = explain.tips.map(t=>`<li>${t}</li>`).join("");
-  const tableRows = CLASSES.map((c,i)=>`<tr><td>${c}</td><td>${(probs[i]*100).toFixed(2)}%</td><td>${probs[i] >= thrVal ? "✓" : "—"}</td></tr>`).join("");
-
-  div.innerHTML = `
-    <article aria-label="Detailed recommendations and overview">
-      <p><strong>Class focus:</strong> ${cls}</p>
-      <p><strong>Overview:</strong> ${explain.overview}</p>
-      <p><strong>General guidance:</strong></p>
-      <ul>${list}</ul>
-      <details>
-        <summary>Show full probability table</summary>
-        <table aria-label="Full probability table with threshold flags">
-          <thead><tr><th>Class</th><th>Probability</th><th>Above threshold?</th></tr></thead>
-          <tbody>${tableRows}</tbody>
-        </table>
-      </details>
-      <p class="warning"><strong>Disclaimer:</strong> This demo is for education only. It does not diagnose conditions. Always seek professional evaluation for symptoms, screening, or treatment decisions.</p>
-    </article>
+function updateRecommendations(topClass, probs){
+  const {recs, txt} = buildOverview(topClass, probs);
+  const el = document.getElementById('recommendations');
+  el.innerHTML = `
+    <p><strong>Top condition:</strong> ${topClass}</p>
+    <ul>${recs.map(r=>`<li>${r}</li>`).join('')}</ul>
+    <p style="opacity:.85">Always confirm with a qualified clinician; this is not medical advice.</p>
   `;
+  return txt;
 }
 
-/* =========================== BUTTON BINDINGS ================================ */
-document.getElementById('readModel').addEventListener('click', ()=> speak(document.getElementById('modelPanel').innerText));
-document.getElementById('readModes').addEventListener('click', ()=> speak(document.getElementById('modesTitle').closest('.panel').innerText));
-document.getElementById('readResults').addEventListener('click', ()=> speak(document.getElementById('main').innerText));
+// ======================= Image handling =======================
+async function imageToTensor(imgEl){
+  const t0 = performance.now();
+  // Draw to canvas at 384x384, letterbox with black bars to preserve aspect
+  const canvas = document.createElement('canvas');
+  canvas.width = IMG_SIZE; canvas.height = IMG_SIZE;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = "#000"; ctx.fillRect(0,0,IMG_SIZE,IMG_SIZE);
+  const iw = imgEl.naturalWidth || imgEl.videoWidth || imgEl.width;
+  const ih = imgEl.naturalHeight || imgEl.videoHeight || imgEl.height;
+  const scale = Math.min(IMG_SIZE/iw, IMG_SIZE/ih);
+  const w = Math.round(iw*scale), h = Math.round(ih*scale);
+  const x = Math.floor((IMG_SIZE - w)/2), y = Math.floor((IMG_SIZE - h)/2);
+  ctx.drawImage(imgEl, x,y,w,h);
+  // Extract RGBA and keep last image for audit
+  const imgData = ctx.getImageData(0,0,IMG_SIZE,IMG_SIZE);
+  lastImageRGBA = imgData;
+  // Convert to Float32 NCHW scaled [0,1]
+  const N = IMG_SIZE*IMG_SIZE;
+  const dataR = new Float32Array(N);
+  const dataG = new Float32Array(N);
+  const dataB = new Float32Array(N);
+  const d = imgData.data;
+  for (let i=0, p=0; i<d.length; i+=4, p++){
+    dataR[p] = d[i]   / 255.0;
+    dataG[p] = d[i+1] / 255.0;
+    dataB[p] = d[i+2] / 255.0;
+  }
+  const input = new ort.Tensor('float32', new Float32Array(CHANNELS*N), [1, CHANNELS, IMG_SIZE, IMG_SIZE]);
+  input.data.set(dataR, 0);
+  input.data.set(dataG, N);
+  input.data.set(dataB, 2*N);
+  const prepMs = performance.now() - t0;
+  return {input, prepMs, size:`${IMG_SIZE}x${IMG_SIZE}`};
+}
 
-/* ============== ACCESSIBLE KEYBOARD SHORTCUTS (OPTIONAL) ==================== */
-document.addEventListener('keydown', (e)=>{
-  if (e.altKey || e.ctrlKey || e.metaKey) return;
-  if (e.key === 'c'){ document.getElementById('tabCamera').click(); }
-  if (e.key === 'u'){ document.getElementById('tabUpload').click(); }
-  if (e.key === 'm'){ document.getElementById('tabManual').click(); }
-  if (e.key === 't'){ ttsToggle.click(); }
+// ======================= ONNX Runtime =======================
+async function initSession(modelBytes=null){
+  const provider = document.getElementById('backend').value;
+  document.getElementById('kBackend').textContent = provider.toUpperCase();
+  const opts = {
+    executionProviders: [provider],
+    graphOptimizationLevel: 'all',
+    enableMemPattern: true,
+    enableCpuMemArena: true
+  };
+  if (provider === 'wasm'){
+    // WASM options
+    opts.wasm = { numThreads: Math.max(2, navigator.hardwareConcurrency ? Math.floor(navigator.hardwareConcurrency/2) : 4) };
+  }
+  if (modelBytes){
+    ortSession = await ort.InferenceSession.create(modelBytes, opts);
+  } else {
+    const cached = await idbGetModel();
+    if (!cached) return null;
+    ortSession = await ort.InferenceSession.create(cached, opts);
+  }
+  return ortSession;
+}
+
+async function ensureModelLoaded(autoSpeakNotice=true){
+  if (ortSession) return true;
+  const sess = await initSession(null);
+  if (sess){
+    setStatus('Model: loaded from cache ✓', true);
+    if (document.getElementById('autoSpeak').checked && autoSpeakNotice){
+      tts.speak('Model loaded from cache. You can start.');
+    }
+    return true;
+  }
+  setStatus('Model: not loaded — click “Load ONNX Model”');
+  return false;
+}
+
+// ======================= Inference =======================
+async function runInferenceFromElement(imgEl){
+  if (!await ensureModelLoaded()) return;
+  const {input, prepMs, size} = await imageToTensor(imgEl);
+  const t0 = performance.now();
+  const feeds = { input };
+  const out = await ortSession.run(feeds);
+  const logits = out.logits?.data || Object.values(out)[0].data; // safeguard
+  const latency = performance.now() - t0;
+
+  // Multi-label: apply sigmoid per class
+  const probs = Array.from({length: CLASSES.length}, (_,i) => sigmoid(logits[i] || 0));
+  const topIdx = probs
+    .map((p,i)=>[i,p])
+    .sort((a,b)=>b[1]-a[1])[0][0];
+  const topClass = CLASSES[topIdx];
+  const topProb = probs[topIdx];
+
+  // UI updates
+  setKPI({latency, backend: document.getElementById('backend').value.toUpperCase(), img:size, top:`${topClass} (${(topProb*100).toFixed(1)}%)`});
+  const chartAlt = renderChart(probs);
+  document.getElementById('inputShape').textContent = `[1, ${CHANNELS}, ${IMG_SIZE}, ${IMG_SIZE}]`;
+  document.getElementById('outShape').textContent = `[1, ${CLASSES.length}] (logits)`;
+  document.getElementById('prepTime').textContent = `${prepMs.toFixed(1)} ms`;
+  document.getElementById('confBar').style.width = `${Math.round(topProb*100)}%`;
+
+  const recText = updateRecommendations(topClass, probs);
+  currentResultText = `Inference complete. ${chartAlt}. ${recText}`;
+  if (document.getElementById('autoSpeak').checked) {
+    tts.speak(currentResultText);
+  }
+}
+
+// ======================= Camera =======================
+let stream = null;
+const video = document.getElementById('video');
+async function startCamera(){
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"user", width:{ideal:1280}, height:{ideal:720}}, audio:false});
+    video.srcObject = stream;
+    document.getElementById('btnSnap').disabled = false;
+    document.getElementById('btnStopCam').disabled = false;
+  }catch(e){
+    alert('Could not access camera: ' + e.message);
+  }
+}
+function stopCamera(){
+  if (stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+  document.getElementById('btnSnap').disabled = true;
+  document.getElementById('btnStopCam').disabled = true;
+}
+async function snapshotAndAnalyze(){
+  if (!video.videoWidth){ alert('Camera not ready'); return; }
+  await runInferenceFromElement(video);
+}
+
+// ======================= Upload =======================
+const uploadPreview = document.getElementById('uploadPreview');
+let uploadedImgEl = null;
+document.getElementById('fileImage').addEventListener('change', (e)=>{
+  const f = e.target.files?.[0];
+  if (!f) return;
+  const url = URL.createObjectURL(f);
+  uploadPreview.innerHTML = '';
+  const img = document.createElement('img');
+  img.src = url; img.alt = 'Uploaded eye image preview';
+  img.onload = ()=> URL.revokeObjectURL(url);
+  uploadPreview.appendChild(img);
+  uploadedImgEl = img;
+  document.getElementById('btnAnalyzeUpload').disabled = false;
 });
 
-/* ============================== ANALYZE HOOKS =============================== */
-document.getElementById('snap').addEventListener('click', ()=> {
-  // After taking picture, pre-fill image info:
-  document.getElementById('imgInfo').textContent = "Camera capture";
+// ======================= Manual mode =======================
+function runManual(){
+  const val = document.getElementById('manualSelect').value;
+  const probs = CLASSES.map(c => c===val ? 0.92 : 0.01); // present a distribution
+  const chartAlt = renderChart(probs);
+  setKPI({latency: NaN, backend: 'Manual', img: '—', top: `${val} (manual)`});
+  document.getElementById('inputShape').textContent = '— (manual mode)';
+  document.getElementById('outShape').textContent = `[1, ${CLASSES.length}] (synthetic)`;
+  document.getElementById('prepTime').textContent = '—';
+  document.getElementById('confBar').style.width = `92%`;
+  const recText = updateRecommendations(val, probs);
+  currentResultText = `Manual selection. ${chartAlt}. ${recText}`;
+  if (document.getElementById('autoSpeak').checked) tts.speak(currentResultText);
+}
+
+// ======================= Tabs =======================
+function activateTab(id){
+  const tabs = document.querySelectorAll('.tab');
+  const sections = document.querySelectorAll('.section');
+  tabs.forEach(t => t.setAttribute('aria-selected', t.id === id));
+  sections.forEach(s => s.classList.toggle('active', s.id === document.getElementById(id).getAttribute('aria-controls')));
+}
+
+// ======================= Events =======================
+document.getElementById('btnStartCam').addEventListener('click', startCamera);
+document.getElementById('btnStopCam').addEventListener('click', stopCamera);
+document.getElementById('btnSnap').addEventListener('click', snapshotAndAnalyze);
+document.getElementById('btnAnalyzeUpload').addEventListener('click', async ()=>{
+  if (!uploadedImgEl){ alert('Upload an image first.'); return; }
+  await runInferenceFromElement(uploadedImgEl);
+});
+document.getElementById('btnManual').addEventListener('click', runManual);
+document.getElementById('btnSpeak').addEventListener('click', ()=> tts.speak(currentResultText || 'There are no results yet.'));
+document.getElementById('btnStopSpeak').addEventListener('click', ()=> tts.stop());
+document.getElementById('backend').addEventListener('change', async ()=>{
+  // re-init session on backend change (using cached model)
+  if (ortSession) { ortSession = null; }
+  const ok = await ensureModelLoaded(false);
+  if (ok) setStatus('Model: ready ✓', true);
+});
+document.getElementById('tabCamera').addEventListener('click', ()=>activateTab('tabCamera'));
+document.getElementById('tabUpload').addEventListener('click', ()=>activateTab('tabUpload'));
+document.getElementById('tabManual').addEventListener('click', ()=>activateTab('tabManual'));
+
+// Load model button
+document.getElementById('btnLoadModel').addEventListener('click', ()=>{
+  document.getElementById('fileModel').click();
+});
+document.getElementById('fileModel').addEventListener('change', async (e)=>{
+  const f = e.target.files?.[0];
+  if (!f) return;
+  const arr = await f.arrayBuffer();
+  setStatus('Loading model…');
+  try{
+    await idbPutModel(arr);
+    await initSession(arr);
+    setStatus('Model: loaded ✓', true);
+    document.getElementById('kBackend').textContent = document.getElementById('backend').value.toUpperCase();
+    if (document.getElementById('autoSpeak').checked) tts.speak('Model loaded successfully. You can start.');
+  }catch(err){
+    console.error(err);
+    setStatus('Model load failed', false);
+    alert('Model load failed: ' + err.message);
+  }
 });
 
+// Auto-load from cache on start
+window.addEventListener('load', async ()=>{
+  const ok = await ensureModelLoaded(); // attempts cache
+  if (ok) setStatus('Model: loaded from cache ✓', true);
+});
+
+// ======================= Accessibility niceties =======================
+document.getElementById('appTitle').setAttribute('tabindex','0');
+document.getElementById('recommendations').setAttribute('tabindex','0');
 </script>
 </body>
 </html>
