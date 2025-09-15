@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Whala‑style Chatbot UI</title>
+  <style>
+    :root{
+      --bg:#0f172a;           /* slate-900 */
+      --panel:#111827;        /* gray-900 */
+      --panel-2:#0b1021;      /* deeper */
+      --text:#e5e7eb;         /* gray-200 */
+      --muted:#9ca3af;        /* gray-400 */
+      --accent:#22d3ee;       /* cyan-400 */
+      --accent-2:#a78bfa;     /* violet-400 */
+      --ok:#34d399;           /* emerald-400 */
+      --warn:#f59e0b;         /* amber-400 */
+      --err:#f87171;          /* red-400 */
+      --card:#0b122b;         /* card bg */
+      --border:rgba(255,255,255,.08);
+      --radius:16px;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+      --font-scale:1; /* dynamic via A+ button */
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background:linear-gradient(180deg,var(--bg),#060a17 40%, #020617);
+      color:var(--text);
+      letter-spacing:.2px;
+      font-size:calc(16px * var(--font-scale));
+    }
+    a{color:var(--accent)}
+    .app{display:flex; flex-direction:column; height:100%;}
+
+    /* Header */
+    .topbar{
+      display:flex; align-items:center; gap:12px; padding:14px 18px; border-bottom:1px solid var(--border);
+      position:sticky; top:0; background:rgba(10,15,32,.8); backdrop-filter: blur(8px); z-index:5;
+    }
+    .brand{display:flex; align-items:center; gap:10px; font-weight:700}
+    .dot{width:10px; height:10px; border-radius:999px; background:linear-gradient(45deg,var(--accent),var(--accent-2)); box-shadow:0 0 8px var(--accent)}
+    .topbar .spacer{flex:1}
+    .toggle-row{display:flex; gap:8px; align-items:center}
+    .toggle{
+      display:inline-flex; align-items:center; gap:8px; border:1px solid var(--border); padding:8px 10px; border-radius:999px;
+      background:rgba(255,255,255,.02); cursor:pointer; user-select:none; transition:.2s ease transform, .2s ease background, .2s ease border;
+    }
+    .toggle input{appearance:none; width:32px; height:18px; background:#22293f; border-radius:999px; position:relative; outline:none; border:1px solid var(--border)}
+    .toggle input:checked{background:#1b2a43}
+    .toggle input::after{content:""; position:absolute; top:50%; left:2px; transform:translateY(-50%); width:14px; height:14px; background:var(--accent); border-radius:999px; transition:.2s ease left}
+    .toggle input:checked::after{left:16px}
+    .btn{border:1px solid var(--border); background:rgba(255,255,255,.03); color:var(--text); padding:8px 12px; border-radius:10px; cursor:pointer; transition:.2s ease transform, .2s ease background}
+    .btn:hover{background:rgba(255,255,255,.06)}
+    .btn.active{background:var(--accent); color:#07101f; border-color:var(--accent)}
+
+    /* Layout */
+    .content{display:grid; grid-template-columns: 1fr; gap:16px; padding:16px; height:calc(100% - 58px)}
+    .side-left, .side-right{display:none}
+
+    .panel{background:linear-gradient(180deg, var(--panel), var(--panel-2)); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden;}
+    .panel h3{margin:0; font-size:1rem; color:#eaf2ff; padding:12px 14px; border-bottom:1px solid var(--border); background:rgba(255,255,255,.03)}
+    .panel .body{padding:12px}
+
+    /* Chat */
+    .chat{display:flex; flex-direction:column; height:100%}
+    .chat-log{flex:1; overflow:auto; padding:16px; display:flex; flex-direction:column; gap:12px; scroll-behavior:smooth}
+    .msg{display:flex; gap:10px; align-items:flex-start}
+    .avatar{width:28px; height:28px; border-radius:8px; background:#141b33; display:grid; place-items:center; font-weight:700; color:#9cc5ff; border:1px solid var(--border)}
+    .bubble{max-width:880px; padding:12px 14px; border:1px solid var(--border); border-radius:14px; background:rgba(255,255,255,.03)}
+    .me .bubble{background:rgba(34,211,238,.08); border-color:rgba(34,211,238,.25)}
+    .assistant .bubble{background:rgba(167,139,250,.07); border-color:rgba(167,139,250,.25)}
+    .meta{font-size:.8rem; color:var(--muted); margin-top:4px}
+
+    /* Composer */
+    .composer{border-top:1px solid var(--border); padding:10px; display:flex; gap:10px; align-items:flex-end; background:rgba(255,255,255,.02)}
+    .composer textarea{flex:1; resize:none; min-height:42px; max-height:160px; border:1px solid var(--border); border-radius:12px; background:#0b1021; color:var(--text); padding:10px 12px; line-height:1.35}
+    .composer .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+    .composer .send{padding:10px 14px; border-radius:12px; font-weight:600; background:linear-gradient(45deg,var(--accent), var(--accent-2)); color:#07101f; border:none}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.8rem; border:1px solid var(--border); padding:2px 6px; border-radius:6px; color:var(--muted)}
+
+    /* Request Template panel */
+    .tpl-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+    .field{display:flex; flex-direction:column; gap:6px}
+    .field label{font-size:.84rem; color:var(--muted)}
+    .field input,.field select,.field textarea{
+      width:100%; border:1px solid var(--border); border-radius:10px; background:#0b1021; color:var(--text); padding:10px 12px;
+    }
+    .small{font-size:.86rem; color:var(--muted)}
+    .divider{height:1px; background:var(--border); margin:10px 0}
+
+    /* Right panel */
+    .side-right .body{display:flex; flex-direction:column; gap:10px}
+    .chip{display:inline-flex; gap:6px; align-items:center; border:1px solid var(--border); padding:6px 10px; border-radius:999px; background:rgba(255,255,255,.02); font-size:.86rem}
+    .note{font-size:.9rem; color:var(--muted)}
+
+    /* High contrast mode */
+    .high-contrast body, body.high-contrast{filter:contrast(1.2) saturate(1.1)}
+    body.high-contrast .panel{background:#000;}
+
+    /* Toast */
+    .toast{position:fixed; bottom:14px; right:14px; background:#0b122b; border:1px solid var(--border); padding:10px 12px; border-radius:12px; box-shadow:var(--shadow); opacity:0; transform:translateY(10px); transition:.25s}
+    .toast.show{opacity:1; transform:translateY(0)}
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <div class="topbar">
+      <div class="brand"><span class="dot"></span> <span>Whala‑style Chat</span></div>
+      <span class="chip" title="Research demo only">Demo</span>
+      <div class="spacer"></div>
+      <div class="toggle-row">
+        <button class="btn" id="ttsBtn" title="Read responses aloud">TTS</button>
+        <button class="btn" id="contrastBtn" title="Increase contrast">High Contrast</button>
+        <button class="btn" id="textBtn" title="Increase text size">A+</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- LEFT: quick settings / request template -->
+      <aside class="panel side-left" style="display: none">
+        <h3>Request Template</h3>
+        <div class="body">
+          <div class="field">
+            <label>Preset</label>
+            <select id="preset">
+              <option value="openai">OpenAI API (Chat Completions)</option>
+              <option value="generic">Generic JSON POST</option>
+              <option value="ollama">Ollama Local</option>
+            </select>
+          </div>
+          <div class="divider"></div>
+
+          <!-- Common fields -->
+          <div class="field">
+            <label>Endpoint URL</label>
+            <input id="endpoint" placeholder="https://api.openai.com/v1/chat/completions" />
+          </div>
+          <div class="tpl-grid">
+            <div class="field">
+              <label>Model</label>
+              <input id="model" placeholder="gpt-4o-mini" />
+            </div>
+            <div class="field">
+              <label>Temperature</label>
+              <input id="temperature" type="number" step="0.1" min="0" max="2" value="0.7" />
+            </div>
+          </div>
+          <div class="field">
+            <label>API Key (optional)</label>
+            <input id="apiKey" placeholder="sk-... (kept local)" />
+          </div>
+          <div class="field">
+            <label>Extra headers (JSON)</label>
+            <textarea id="extraHeaders" rows="3" placeholder='{"http-Referer":"your-site"}'></textarea>
+          </div>
+          <div class="field">
+            <label>Body override (advanced JSON) — leave blank to auto-build</label>
+            <textarea id="bodyOverride" rows="6" placeholder='{"model":"gpt-4o-mini","messages":[{"role":"user","content":"Hello"}]}'></textarea>
+          </div>
+
+          <div class="divider"></div>
+          <div class="small">Tip: Presets auto‑fill fields. You can still edit anything before sending.</div>
+        </div>
+      </aside>
+
+      <!-- CENTER: chat -->
+      <main class="panel chat" >
+        <h3>Chat</h3>
+        <div class="chat-log" id="log"></div>
+        <div class="composer">
+          <div class="row" style="flex:1; align-items:stretch">
+            <textarea id="input" placeholder="Ask anything… (Shift+Enter = newline)" rows="2"></textarea>
+            <button class="send" id="send">Send <span class="kbd">↵</span></button>
+          </div>
+        </div>
+      </main>
+
+      <!-- RIGHT: insights/help -->
+      <aside class="panel side-right" style="display: none">
+        <h3>Deep Metrics & Accessibility</h3>
+        <div class="body">
+          <div class="chip">Latency: <span id="latency">—</span></div>
+          <div class="chip">Tokens: <span id="tokens">—</span></div>
+          <div class="chip">Status: <span id="status">idle</span></div>
+          <p class="note">This interface borrows a high‑contrast, utility‑first look inspired by the sample you shared. It supports TTS, contrast, and adaptive text size. Everything runs client‑side except your API call.</p>
+          <p class="note">Keyboard: <span class="kbd">Enter</span> to send, <span class="kbd">Shift</span>+<span class="kbd">Enter</span> for newline.</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    // --- Accessibility toggles ---
+    const ttsBtn = document.getElementById('ttsBtn');
+    const contrastBtn = document.getElementById('contrastBtn');
+    const textBtn = document.getElementById('textBtn');
+    let ttsOn = false; let fontScale = 1;
+    ttsBtn.addEventListener('click', ()=>{ ttsOn = !ttsOn; ttsBtn.classList.toggle('active', ttsOn); notify(`TTS ${ttsOn? 'on':'off'}`); });
+    contrastBtn.addEventListener('click', ()=>{ document.body.classList.toggle('high-contrast'); notify('Contrast toggled');});
+    textBtn.addEventListener('click', ()=>{ fontScale = Math.min(1.6, +(fontScale + 0.1).toFixed(1)); document.documentElement.style.setProperty('--font-scale', fontScale); notify('Text size +');});
+
+    // --- Presets ---
+    const preset = document.getElementById('preset');
+    const endpoint = document.getElementById('endpoint');
+    const model = document.getElementById('model');
+    const temperature = document.getElementById('temperature');
+    const apiKey = document.getElementById('apiKey');
+    const extraHeaders = document.getElementById('extraHeaders');
+    const bodyOverride = document.getElementById('bodyOverride');
+    var savedHistory = localStorage.getItem('chatHistory');
+
+   var messages = JSON.parse(savedHistory) || [
+    {
+        "role": "system", 
+        "content": "You are a medical advisor AI large language model called WhalaBot to diagnose, identify and treat eye ailments and LLMs. A CNN will give you a classification on context as to the ailment (if any) that the user has. You must always maintain and be respectful, kind  and very empathetic. Do not hallucinate. Be very accurate and supportive of the user. Your goal is to be as helpful as possible, steering away from any potentially sensitive topics and being aware of user boundaries and respecting user safety."
+    }
+   ]
+    var body = {
+    "model": "gpt-5-nano",
+    "messages": messages,
+    "max_tokens": 1500
+}
+    const presets = {
+      openai(){
+        endpoint.value = 'https://api.openai.com/v1/chat/completions';
+        model.value = 'gpt-4o-mini';
+        temperature.value = 0.7;
+        extraHeaders.value = '';
+        bodyOverride.value = '';
+      },
+      generic(){
+        endpoint.value = 'https://example.com/your-endpoint';
+        model.value = 'your-model-name';
+        temperature.value = 0.7; extraHeaders.value = '{"Content-Type":"application/json"}';
+        bodyOverride.value = '';
+      },
+      ollama(){
+        endpoint.value = 'http://localhost:11434/api/chat';
+        model.value = 'llama3.1';
+        temperature.value = 0.7; extraHeaders.value = '{"Content-Type":"application/json"}';
+        bodyOverride.value = '';
+      }
+    };
+    preset.addEventListener('change', ()=> presets[preset.value]?.());
+    presets.openai();
+
+    // --- Chat logic ---
+    const log = document.getElementById('log');
+    const input = document.getElementById('input');
+    const sendBtn = document.getElementById('send');
+    const statusEl = document.getElementById('status');
+    const latencyEl = document.getElementById('latency');
+    const tokensEl = document.getElementById('tokens');
+    let chatHistory = [];
+
+    function addMsg(role, text){
+      const li = document.createElement('div'); li.className = `msg ${role}`;
+      const av = document.createElement('div'); av.className = 'avatar'; av.textContent = role === 'me' ? 'ME' : 'AI';
+      const bubble = document.createElement('div'); bubble.className = 'bubble'; bubble.innerHTML = sanitizeMarkdown(text);
+      const meta = document.createElement('div'); meta.className = 'meta'; meta.textContent = new Date().toLocaleTimeString();
+      const stack = document.createElement('div'); stack.style.maxWidth = 'min(100%, 860px)';
+      stack.appendChild(bubble); stack.appendChild(meta);
+      li.appendChild(av); li.appendChild(stack); log.appendChild(li); log.scrollTop = log.scrollHeight;
+      
+      chatHistory.push({role: role === 'me' ? 'user' : 'assistant', content: text});
+      localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+      
+      if(ttsOn && role==='assistant' && 'speechSynthesis' in window){
+        const u = new SpeechSynthesisUtterance(stripTags(text)); window.speechSynthesis.speak(u);
+      }
+    }
+
+    function sanitizeMarkdown(md){
+      // Minimal sanitization for demo (prevents simple HTML injection)
+      return md.replace(/</g,'&lt;').replace(/\n/g,'<br/>');
+    }
+    function stripTags(t){ const d=document.createElement('div'); d.innerHTML=t; return d.textContent || d.innerText || ''; }
+
+    async function send(){
+      const userText = input.value.trim(); if(!userText) return; input.value = '';
+      addMsg('me', userText);
+      const started = performance.now(); statusEl.textContent='sending…';
+
+      try{
+        const hdrs = { 'Content-Type':'application/json' };
+        messages.push( {
+            "role": "user",
+            "content": userText
+        },)
+
+        const res = await fetch('https://cookiemonster0921--b4d0624c920611f0a2250224a6c84d84.web.val.run', { 
+          method:'POST', 
+          headers: hdrs, 
+          body: JSON.stringify(body) 
+        });
+        
+        const elapsed = performance.now() - started; latencyEl.textContent = `${Math.round(elapsed)} ms`;
+        if(!res.ok){ throw new Error(`${res.status} ${res.statusText}`); }
+
+        const data = await res.json().catch(()=> ({}));
+        let text = data?.response || data?.message || JSON.stringify(data) || 'No response received';
+
+        addMsg('assistant', text.replace(/[\/\\"]/g, ''))
+        messages.push(  {
+            "role": "assistant",
+            "content": text
+        },)
+        statusEl.textContent='idle';
+      } catch(err){
+        console.error(err);
+        addMsg('assistant', `❌ <b>Error:</b> <code>${(err?.message||err).toString()}</code>`);
+        statusEl.textContent='error';
+      }
+    }
+
+    sendBtn.addEventListener('click', send);
+    input.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); }
+    });
+
+    // --- Toast helper ---
+    function notify(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 1400); }
+
+    // Load chat history from localStorage
+    var savedHistory = localStorage.getItem('chatHistory');
+    if(savedHistory){
+      chatHistory = JSON.parse(savedHistory);
+      chatHistory.forEach(msg => {
+        const role = msg.role === 'user' ? 'me' : 'assistant';
+        const li = document.createElement('div'); li.className = `msg ${role}`;
+        const av = document.createElement('div'); av.className = 'avatar'; av.textContent = role === 'me' ? 'ME' : 'AI';
+        const bubble = document.createElement('div'); bubble.className = 'bubble'; bubble.innerHTML = sanitizeMarkdown(msg.content);
+        const meta = document.createElement('div'); meta.className = 'meta';
+        const stack = document.createElement('div'); stack.style.maxWidth = 'min(100%, 860px)';
+        stack.appendChild(bubble); stack.appendChild(meta);
+        li.appendChild(av); li.appendChild(stack); log.appendChild(li);
+      });
+      log.scrollTop = log.scrollHeight;
+    } else {
+      // Seed assistant greeting
+      addMsg('assistant', 'Hi! I\'m your Whala chatbot. Ask me anything, or configure the Request Template on the left and press Send.');
+    }
+  </script>
+</body>
+</html>

@@ -397,3 +397,4 @@ if not os.path.exists(save_path):
     metadata = {"cfg": json.dumps(cfg.__dict__), "chs": json.dumps(list(auto_chs))}
     safetensors_save(tensors, save_path, metadata=metadata)
 print(f"Model state_dict saved to {os.path.abspath(save_path)}")
+
