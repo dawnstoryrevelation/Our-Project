@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -70,7 +71,6 @@
     </div>
     <div class="controls" role="group" aria-label="Model loading and runtime controls">
       <button id="btnLoadModel" class="primary" aria-describedby="modelStatus">Load ONNX Model</button>
-      <input id="fileModel" type="file" accept=".onnx" class="sr-only" aria-hidden="true" />
       <select id="backend" aria-label="Execution provider">
         <option value="webgpu">WebGPU (fastest, preferred)</option>
         <option value="webgl">WebGL</option>
@@ -588,32 +588,53 @@ document.getElementById('tabCamera').addEventListener('click', ()=>activateTab('
 document.getElementById('tabUpload').addEventListener('click', ()=>activateTab('tabUpload'));
 document.getElementById('tabManual').addEventListener('click', ()=>activateTab('tabManual'));
 
-// Load model button
-document.getElementById('btnLoadModel').addEventListener('click', ()=>{
-  document.getElementById('fileModel').click();
-});
-document.getElementById('fileModel').addEventListener('change', async (e)=>{
-  const f = e.target.files?.[0];
-  if (!f) return;
-  const arr = await f.arrayBuffer();
-  setStatus('Loading model…');
+// Load model from online URL
+const MODEL_URL = 'https://huggingface.co/Dawntasy/B-Eye-O-Marker_CNN-V2.1/resolve/main/B-Eye-O-Marker_CNN-V2_Swish.onnx';
+
+async function loadModelFromURL(){
+  setStatus('Downloading model…');
   try{
+    console.log('Fetching model from:', MODEL_URL);
+    const response = await fetch(MODEL_URL, { mode: 'cors' });
+    console.log('Response status:', response.status, response.statusText);
+    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    
+    const contentLength = response.headers.get('content-length');
+    console.log('Model size:', contentLength ? `${Math.round(contentLength/1024/1024)}MB` : 'unknown');
+    
+    const arr = await response.arrayBuffer();
+    console.log('Downloaded bytes:', arr.byteLength);
+    
+    setStatus('Loading model…');
     await idbPutModel(arr);
-    await initSession(arr);
+    
+    console.log('Creating ONNX session...');
+    ortSession = await ort.InferenceSession.create(arr, {
+      executionProviders: [document.getElementById('backend').value],
+      graphOptimizationLevel: 'all'
+    });
+    
+    console.log('Model loaded successfully');
     setStatus('Model: loaded ✓', true);
     document.getElementById('kBackend').textContent = document.getElementById('backend').value.toUpperCase();
     if (document.getElementById('autoSpeak').checked) tts.speak('Model loaded successfully. You can start.');
   }catch(err){
-    console.error(err);
+    console.error('Model loading error:', err);
     setStatus('Model load failed', false);
-    alert('Model load failed: ' + err.message);
+    alert('Model load failed: ' + err.message + '\nCheck console for details.');
   }
-});
+}
 
-// Auto-load from cache on start
+document.getElementById('btnLoadModel').addEventListener('click', loadModelFromURL);
+
+// Auto-load model on page load
 window.addEventListener('load', async ()=>{
-  const ok = await ensureModelLoaded(); // attempts cache
-  if (ok) setStatus('Model: loaded from cache ✓', true);
+  const ok = await ensureModelLoaded(); // attempts cache first
+  if (!ok) {
+    await loadModelFromURL(); // download if not cached
+  } else {
+    setStatus('Model: loaded from cache ✓', true);
+  }
 });
 
 // ======================= Accessibility niceties =======================
